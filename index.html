@@ -711,6 +711,8 @@
             </div>
         </div>
 
+        <div id="homepage-payment-visual" style="margin-bottom: 30px;"></div>
+
         <!-- MEMBER LOGIN SELECTION -->
         <div id="member-selection-section">
             <div class="login-header">
@@ -895,6 +897,30 @@
                 </div>
 
                 <div style="max-width: 450px; background: var(--bg-body); padding: 25px; border-radius: 8px; border: 1px solid var(--border-color); margin-top: 20px;">
+                    <label class="form-label">Homepage Payment Visual</label>
+                    <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 15px;">Shown to <strong>everyone</strong> who visits the site, before login. Only one option is ever live at a time — switch freely to preview each.</p>
+
+                    <label class="month-checkbox-label" style="margin-bottom: 12px; align-items: flex-start;">
+                        <input type="radio" name="homepage-visual-mode" value="none" style="margin-top: 3px;">
+                        <span><strong>Off</strong> — no payment visual on the homepage.</span>
+                    </label>
+                    <label class="month-checkbox-label" style="margin-bottom: 12px; align-items: flex-start;">
+                        <input type="radio" name="homepage-visual-mode" value="aggregate" style="margin-top: 3px;">
+                        <span><strong>Aggregate only</strong> — a chart showing what % of members are paid up this month. No names shown. Safest option.</span>
+                    </label>
+                    <label class="month-checkbox-label" style="margin-bottom: 12px; align-items: flex-start;">
+                        <input type="radio" name="homepage-visual-mode" value="shoutout" style="margin-top: 3px;">
+                        <span><strong>Positive shoutout</strong> — names members who've paid this month, as a thank-you. Doesn't list anyone as "unpaid."</span>
+                    </label>
+                    <label class="month-checkbox-label" style="margin-bottom: 15px; align-items: flex-start;">
+                        <input type="radio" name="homepage-visual-mode" value="full" style="margin-top: 3px;">
+                        <span><strong>Full public list</strong> — every member's name and this month's status (Paid/Owed), visible to anyone. Consider carefully before using this — it's real financial standing made public.</span>
+                    </label>
+
+                    <button class="btn btn-green main-admin-only" id="save-homepage-visual-btn" style="width: 100%; justify-content: center;" onclick="saveHomepageVisualMode()">Save</button>
+                </div>
+
+                <div style="max-width: 450px; background: var(--bg-body); padding: 25px; border-radius: 8px; border: 1px solid var(--border-color); margin-top: 20px;">
                     <label class="form-label">Data Backup</label>
                     <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 15px;">Download every member, payment record, and the full audit trail as one file — keep it somewhere safe as an insurance copy.</p>
                     <button class="btn btn-blue" style="width: 100%; justify-content: center;" onclick="downloadFullBackup()">⬇ Download Full Backup</button>
@@ -936,6 +962,7 @@
         // managed entirely in Settings -> Admin Access, not here in code.
         const MAIN_ADMIN_EMAIL = "anuanom390@gmail.com";
         let secondaryAdminEmails = [];
+        let homepageVisualMode = 'none';
         let currentAdminRole = null; // 'main' | 'secondary' | null
 
         // Instantly show the logo from last time this device loaded the portal,
@@ -1099,6 +1126,7 @@
             renderStats();
             renderAdminTable(document.getElementById('admin-table-search') ? document.getElementById('admin-table-search').value : '');
             renderMemberCards(document.getElementById('member-search') ? document.getElementById('member-search').value : '');
+            renderHomepageVisual();
 
             if (loggedInMember) {
                 const fresh = membersData.find(m => m.id === loggedInMember.id);
@@ -1145,6 +1173,7 @@
                 specialFundExpiryDays = data.specialFundExpiryDays || specialFundExpiryDays;
                 specialFundStartedAt = data.specialFundStartedAt || null;
                 secondaryAdminEmails = data.secondaryAdminEmails || [];
+                homepageVisualMode = data.homepageVisualMode || 'none';
 
                 const newEndYear = data.calendarEndYear || calendarEndYear;
                 if (newEndYear !== calendarEndYear) {
@@ -1161,11 +1190,14 @@
             renderSpecialFundLabels();
             renderMemberMonthsGrid();
             renderAdminTable(document.getElementById('admin-table-search') ? document.getElementById('admin-table-search').value : '');
+            renderHomepageVisual();
             if (isAdminView) {
                 renderActiveYearOptions();
                 renderRateInputs();
                 document.getElementById('logo-preview').innerHTML = logoData ? `<img src="${logoData}" alt="Logo">` : 'AN';
                 renderAdminAccessList();
+                const modeInput = document.querySelector(`input[name="homepage-visual-mode"][value="${homepageVisualMode}"]`);
+                if (modeInput) modeInput.checked = true;
             }
             markReady('settings');
         }, err => {
@@ -1577,6 +1609,8 @@
                 document.getElementById('logo-preview').innerHTML = logoData ? `<img src="${logoData}" alt="Logo">` : 'AN';
                 renderSpecialFundLabels();
                 renderAdminAccessList();
+                const modeInput = document.querySelector(`input[name="homepage-visual-mode"][value="${homepageVisualMode}"]`);
+                if (modeInput) modeInput.checked = true;
                 applyAdminRoleRestrictions();
                 showToast(currentAdminRole === 'main' ? 'Admin Portal Active' : 'Admin Portal Active — view only');
                 if (currentAdminRole === 'main') {
@@ -2377,6 +2411,145 @@
                     }
                 }
             });
+        }
+
+        // ------------------------------------------------------------
+        // HOMEPAGE PAYMENT VISUAL — admin-selectable, one mode live at a
+        // time (see Settings). Never shows more than what that mode allows.
+        // ------------------------------------------------------------
+        let homepageVisualChartInstance = null;
+
+        function renderHomepageVisual() {
+            const container = document.getElementById('homepage-payment-visual');
+            if (!container) return;
+
+            if (homepageVisualMode === 'none' || membersData.length === 0) {
+                container.innerHTML = '';
+                return;
+            }
+
+            const currIdx = getCurrentMonthIndex();
+            const currentMonth = welfareMonths[currIdx];
+
+            // Only count members who'd actually joined by this month.
+            const eligibleMembers = membersData.filter(m => {
+                const joinIdxRaw = m.joinMonth ? welfareMonths.indexOf(m.joinMonth) : 0;
+                const joinIdx = joinIdxRaw === -1 ? 0 : joinIdxRaw;
+                return joinIdx <= currIdx;
+            });
+            const paidMembers = eligibleMembers.filter(m => (m.paidMonths || []).includes(currentMonth));
+            const unpaidMembers = eligibleMembers.filter(m => !(m.paidMonths || []).includes(currentMonth));
+
+            if (homepageVisualMode === 'aggregate') {
+                renderAggregateVisual(container, paidMembers.length, unpaidMembers.length, currentMonth);
+            } else if (homepageVisualMode === 'shoutout') {
+                renderShoutoutVisual(container, paidMembers, currentMonth);
+            } else if (homepageVisualMode === 'full') {
+                renderFullListVisual(container, paidMembers, unpaidMembers, currentMonth);
+            }
+        }
+
+        function renderAggregateVisual(container, paidCount, unpaidCount, currentMonth) {
+            const total = paidCount + unpaidCount;
+            const percent = total > 0 ? Math.round((paidCount / total) * 100) : 0;
+
+            container.innerHTML = `
+                <div style="background: var(--bg-card); border-radius: 12px; padding: 25px; border: 1px solid var(--border-color); text-align: center;">
+                    <div style="font-size: 0.8rem; color: var(--accent-blue); font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 15px;">${escapeHtml(currentMonth)} Collection Progress</div>
+                    <div style="max-width: 200px; margin: 0 auto;">
+                        <canvas id="homepage-aggregate-chart"></canvas>
+                    </div>
+                    <div style="font-size: 1.8rem; font-weight: 800; color: var(--accent-green); margin-top: 15px;">${percent}% up to date</div>
+                    <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 5px;">${paidCount} of ${total} members have paid this month</p>
+                </div>
+            `;
+
+            const ctx = document.getElementById('homepage-aggregate-chart');
+            if (homepageVisualChartInstance) homepageVisualChartInstance.destroy();
+            homepageVisualChartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Paid', 'Not Yet'],
+                    datasets: [{
+                        data: [paidCount, unpaidCount],
+                        backgroundColor: ['rgba(16, 185, 129, 0.8)', 'rgba(148, 163, 184, 0.25)'],
+                        borderColor: ['rgba(16, 185, 129, 1)', 'rgba(148, 163, 184, 0.4)'],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    cutout: '70%',
+                    plugins: { legend: { display: false }, tooltip: { enabled: false } }
+                }
+            });
+        }
+
+        function renderShoutoutVisual(container, paidMembers, currentMonth) {
+            if (paidMembers.length === 0) {
+                container.innerHTML = `
+                    <div style="background: var(--bg-card); border-radius: 12px; padding: 25px; border: 1px solid var(--border-color); text-align: center;">
+                        <div style="font-size: 0.8rem; color: var(--accent-blue); font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px;">${escapeHtml(currentMonth)} Contributors</div>
+                        <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 10px;">No one has paid yet this month — be the first!</p>
+                    </div>
+                `;
+                return;
+            }
+            container.innerHTML = `
+                <div style="background: var(--bg-card); border-radius: 12px; padding: 25px; border: 1px solid var(--border-color);">
+                    <div style="font-size: 0.8rem; color: var(--accent-blue); font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 15px; text-align: center;">🙌 Thank You — ${escapeHtml(currentMonth)} Contributors</div>
+                    <div style="display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; max-height: 200px; overflow-y: auto; padding: 5px;">
+                        ${paidMembers.map(m => `<span class="badge badge-green">${escapeHtml(m.name)}</span>`).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderFullListVisual(container, paidMembers, unpaidMembers, currentMonth) {
+            const allSorted = [
+                ...paidMembers.map(m => ({ name: m.name, paid: true })),
+                ...unpaidMembers.map(m => ({ name: m.name, paid: false }))
+            ].sort((a, b) => a.name.localeCompare(b.name));
+
+            container.innerHTML = `
+                <div style="background: var(--bg-card); border-radius: 12px; padding: 25px; border: 1px solid var(--border-color);">
+                    <div style="font-size: 0.8rem; color: var(--accent-blue); font-weight: bold; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 15px; text-align: center;">${escapeHtml(currentMonth)} Payment Status — All Members</div>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; max-height: 300px; overflow-y: auto; padding: 5px;">
+                        ${allSorted.map(m => `
+                            <div style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-body); padding: 8px 12px; border-radius: 6px; font-size: 0.85rem;">
+                                <span>${escapeHtml(m.name)}</span>
+                                <span class="badge ${m.paid ? 'badge-green' : 'badge-red'}">${m.paid ? 'Paid' : 'Owed'}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function saveHomepageVisualMode() {
+            const selected = document.querySelector('input[name="homepage-visual-mode"]:checked');
+            if (!selected) {
+                showToast('Please choose an option.', true);
+                return;
+            }
+            const newMode = selected.value;
+            const saveBtn = document.getElementById('save-homepage-visual-btn');
+            saveBtn.innerText = 'Saving...';
+            saveBtn.disabled = true;
+
+            settingsDoc.set({ homepageVisualMode: newMode }, { merge: true })
+                .then(() => {
+                    logAudit(`Homepage payment visual set to "${newMode}".`);
+                    showToast('Homepage visual updated!');
+                })
+                .catch(err => {
+                    console.error('Saving homepage visual mode failed:', err);
+                    showToast('Could not save — check your connection and try again.', true);
+                })
+                .finally(() => {
+                    saveBtn.innerText = 'Save';
+                    saveBtn.disabled = false;
+                });
         }
 
         // ------------------------------------------------------------
