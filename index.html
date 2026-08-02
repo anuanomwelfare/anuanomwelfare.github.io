@@ -1,0 +1,3025 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anuanom 2016 Welfare - Portal</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#0a0e17">
+    <link rel="icon" href="icon-192.png">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <!-- html2pdf library for client-side PDF export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <!-- Firebase (Firestore for data persistence + Auth for admin login) -->
+    <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/12.15.0/firebase-auth-compat.js"></script>
+    <!-- Chart.js for the admin Reports tab -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js"></script>
+    <style>
+        :root {
+            --bg-body: #0a0e17;
+            --bg-card: #121929;
+            --bg-card-hover: #1a233a;
+            --text-main: #ffffff;
+            --text-muted: #94a3b8;
+            --accent-orange: #f97316;
+            --accent-blue: #3b82f6;
+            --accent-purple: #8b5cf6;
+            --accent-green: #10b981;
+            --accent-red: #ef4444;
+            --border-color: #1e293b;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-body);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 40px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .logo-section { display: flex; align-items: center; gap: 15px; }
+
+        .logo-circle {
+            width: 45px; height: 45px;
+            border-radius: 50%;
+            background-color: #1e1b4b;
+            color: var(--accent-orange);
+            display: flex; justify-content: center; align-items: center;
+            font-weight: bold; font-size: 1.2rem;
+            box-shadow: 0 0 15px rgba(249, 115, 22, 0.3);
+            border: 1px solid rgba(249, 115, 22, 0.5);
+            overflow: hidden;
+        }
+        .logo-circle img { width: 100%; height: 100%; object-fit: cover; }
+
+        .logo-upload-preview {
+            width: 70px; height: 70px; border-radius: 50%;
+            background-color: #1e1b4b; color: var(--accent-orange);
+            display: flex; justify-content: center; align-items: center;
+            font-weight: bold; font-size: 1.6rem; overflow: hidden;
+            border: 1px solid rgba(249, 115, 22, 0.5); flex-shrink: 0;
+        }
+        .logo-upload-preview img { width: 100%; height: 100%; object-fit: cover; }
+
+        .logo-text h1 { font-size: 1.2rem; text-transform: uppercase; letter-spacing: 1px; }
+        .logo-text p { font-size: 0.85rem; color: var(--accent-blue); }
+
+        .admin-btn {
+            background-color: rgba(255,255,255,0.05);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
+            padding: 8px 16px; border-radius: 20px;
+            cursor: pointer; transition: all 0.2s;
+        }
+        .admin-btn.active { background-color: var(--accent-green); color: #000; border-color: var(--accent-green); }
+        .admin-btn:hover:not(.active) { background-color: rgba(255,255,255,0.1); }
+
+        main { padding: 40px; max-width: 1200px; margin: 0 auto; width: 100%; flex-grow: 1; }
+
+        /* Hero Section */
+        .hero {
+            background: linear-gradient(145deg, #121929, #0d121f);
+            border-radius: 15px; padding: 40px 20px; text-align: center;
+            margin-bottom: 30px; border: 1px solid var(--border-color);
+        }
+        .hero .logo-circle { width: 70px; height: 70px; font-size: 2rem; margin: 0 auto 20px auto; }
+        .hero h2 { font-size: 2rem; margin-bottom: 10px; }
+        .hero p { color: var(--text-muted); font-size: 0.95rem; }
+
+        /* Stats Grid */
+        .stats-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 15px; margin-bottom: 30px; }
+        .stat-card { background-color: var(--bg-card); border-radius: 12px; padding: 15px; border: 1px solid var(--border-color); }
+        .stat-title { font-size: 0.7rem; color: var(--accent-blue); font-weight: bold; text-transform: uppercase; margin-bottom: 8px; letter-spacing: 0.5px; }
+        .stat-value { font-size: 1.4rem; font-weight: 800; }
+        .val-white { color: var(--text-main); }
+        .val-green { color: var(--accent-green); }
+        .val-red { color: var(--accent-red); }
+        .val-orange { color: var(--accent-orange); }
+        .val-purple { color: #a78bfa; }
+
+        .homecoming-timer-badge {
+            display: inline-flex; flex-direction: column; align-items: center; gap: 6px;
+            margin-top: 8px; padding: 6px 14px;
+            border-radius: 12px; font-size: 0.75rem; font-weight: 600;
+            min-width: 120px;
+            transition: color 0.4s ease, background 0.4s ease, border-color 0.4s ease;
+        }
+        .timer-progress-track {
+            width: 100%; height: 5px; border-radius: 3px;
+            background: rgba(255,255,255,0.12); overflow: hidden;
+        }
+        .timer-progress-fill {
+            height: 100%; border-radius: 3px;
+            transition: width 0.4s ease, background 0.4s ease;
+        }
+
+        .fund-campaign-banner {
+            background: var(--bg-body); border: 1px solid var(--border-color); border-radius: 8px;
+            padding: 14px 16px; margin-bottom: 20px; text-align: center;
+        }
+        .fund-campaign-banner .fund-campaign-name {
+            font-size: 0.8rem; color: var(--accent-blue); font-weight: bold;
+            text-transform: uppercase; letter-spacing: 0.5px;
+        }
+        /* Reusable form label — replaces ~17 identical inline style attributes
+           that were scattered across every modal and settings card. */
+        .form-label { font-size: 0.85rem; color: var(--accent-blue); display: block; margin-bottom: 5px; font-weight: bold; }
+        .form-label.small { font-size: 0.8rem; }
+        .form-label.left { text-align: left; }
+
+        .main-admin-only:disabled {
+            opacity: 0.35; cursor: not-allowed; pointer-events: none;
+        }
+        #view-only-banner {
+            background: rgba(59, 130, 246, 0.1); color: var(--accent-blue);
+            border: 1px solid rgba(59, 130, 246, 0.4); border-radius: 8px;
+            padding: 12px 16px; font-size: 0.85rem; margin-bottom: 20px; text-align: center;
+        }
+        .val-cyan { color: #38bdf8; }
+
+        /* Member Login Grid */
+        .login-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .login-header h3 { color: var(--accent-blue); font-size: 1rem; text-transform: uppercase; letter-spacing: 1px; }
+        .search-box { background-color: var(--bg-body); border: 1px solid var(--border-color); padding: 8px 15px; border-radius: 20px; color: var(--text-main); width: 250px; outline: none; }
+        .search-box:focus { border-color: var(--accent-blue); }
+        
+        .members-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+        .member-card {
+            background-color: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px;
+            padding: 20px; display: flex; align-items: center; gap: 15px; cursor: pointer; transition: all 0.2s;
+        }
+        .member-card:hover { background-color: var(--bg-card-hover); transform: translateY(-2px); border-color: var(--accent-orange); }
+        
+        .member-avatar { width: 40px; height: 40px; border-radius: 50%; background-color: #1e1b4b; color: var(--text-main); display: flex; justify-content: center; align-items: center; font-weight: bold; }
+        .member-info h4 { font-size: 1rem; margin-bottom: 5px; }
+        .member-info p { font-size: 0.8rem; color: var(--accent-orange); display: flex; align-items: center; gap: 5px; }
+
+        /* Modal Overlay */
+        .modal-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0, 0, 0, 0.7); display: flex; justify-content: center; align-items: center;
+            z-index: 1000; opacity: 0; pointer-events: none; transition: opacity 0.2s ease;
+        }
+        .modal-overlay.active { opacity: 1; pointer-events: auto; }
+        .modal {
+            background: var(--bg-card); border: 1px solid var(--border-color); padding: 30px;
+            border-radius: 12px; width: 480px; text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            max-height: 90vh; overflow-y: auto;
+        }
+        .modal h3 { margin-bottom: 5px; font-size: 1.2rem; }
+        .modal p { color: var(--text-muted); font-size: 0.85rem; margin-bottom: 20px; }
+        .modal input, .modal select { width: 100%; padding: 10px; background: var(--bg-body); border: 1px solid var(--border-color); border-radius: 6px; color: white; outline: none; margin-bottom: 15px; }
+        .modal-actions { display: flex; gap: 10px; margin-top: 15px; }
+        .forgot-pin-link { color: var(--accent-blue); font-size: 0.85rem; cursor: pointer; text-decoration: underline; margin-top: 10px; display: inline-block; }
+
+        /* Admin UI */
+        .admin-tabs { display: flex; background-color: var(--bg-card); border: 1px solid var(--border-color); border-radius: 8px; margin-bottom: 25px; overflow: hidden; }
+        .tab { padding: 15px 20px; color: var(--text-muted); font-size: 0.9rem; cursor: pointer; border-right: 1px solid var(--border-color); font-weight: 500; transition: background 0.2s; }
+        .tab.active { background-color: rgba(59, 130, 246, 0.1); color: var(--accent-blue); }
+
+        .dashboard-content { background-color: var(--bg-card); border-radius: 12px; border: 1px solid var(--border-color); padding: 20px; }
+
+        .table-header-controls { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 15px; }
+        .table-title-group { display: flex; align-items: center; gap: 15px; }
+        .table-title-group h3 { font-size: 1rem; letter-spacing: 1px; }
+        
+        .filter-pills { display: flex; gap: 10px; }
+        .pill { padding: 4px 12px; border-radius: 15px; font-size: 0.8rem; cursor: pointer; background: transparent; color: var(--text-muted); border: 1px solid var(--border-color); transition: all 0.2s; }
+        .pill.active { background: rgba(139, 92, 246, 0.2); color: var(--accent-purple); border-color: var(--accent-purple); }
+
+        .table-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+        .btn { padding: 8px 16px; border-radius: 6px; font-size: 0.85rem; cursor: pointer; border: none; font-weight: 500; display: flex; align-items: center; gap: 5px; }
+        .btn-purple { background-color: var(--accent-purple); color: white; }
+        .btn-green { background-color: var(--accent-green); color: black; }
+        .btn-blue { background-color: var(--accent-blue); color: white; }
+        .btn-red { background-color: var(--accent-red); color: white; }
+        .btn-gray { background-color: #334155; color: white; }
+
+        .table-wrapper { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; min-width: 850px; }
+        th { text-align: left; color: var(--accent-blue); font-size: 0.8rem; text-transform: uppercase; padding: 15px 10px; border-bottom: 1px solid var(--border-color); }
+        td { padding: 15px 10px; font-size: 0.9rem; border-bottom: 1px solid rgba(30, 41, 59, 0.5); }
+        
+        .badge { padding: 4px 10px; border-radius: 12px; font-size: 0.75rem; font-weight: bold; display: inline-block; }
+        .badge-green { background: rgba(16, 185, 129, 0.15); color: var(--accent-green); border: 1px solid rgba(16, 185, 129, 0.3); }
+        .badge-orange { background: rgba(249, 115, 22, 0.15); color: var(--accent-orange); border: 1px solid rgba(249, 115, 22, 0.3); }
+        .badge-red { background: rgba(239, 68, 68, 0.15); color: var(--accent-red); border: 1px solid rgba(239, 68, 68, 0.3); }
+        .badge-blue { background: rgba(59, 130, 246, 0.15); color: var(--accent-blue); border: 1px solid rgba(59, 130, 246, 0.3); }
+
+        .action-btns { display: flex; gap: 6px; }
+        .action-link { background: rgba(59, 130, 246, 0.15); border: 1px solid rgba(59, 130, 246, 0.3); padding: 5px 10px; border-radius: 6px; font-size: 0.75rem; color: var(--accent-blue); text-decoration: none; cursor: pointer; display: inline-block; }
+        .action-link:hover { background: rgba(59, 130, 246, 0.3); }
+        .action-link.danger { background: rgba(239, 68, 68, 0.15); border-color: rgba(239, 68, 68, 0.3); color: var(--accent-red); }
+        .action-link.danger:hover { background: rgba(239, 68, 68, 0.3); }
+        
+        .text-red { color: var(--accent-red); font-weight: 500; }
+        .text-green { color: var(--accent-green); font-weight: bold; }
+        .text-orange { color: var(--accent-orange); font-weight: bold; }
+        .text-blue { color: var(--accent-blue); font-weight: 500; }
+
+        /* Month breakdown pills in dashboard & modal */
+        .months-grid-container {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            max-height: 250px;
+            overflow-y: auto;
+            padding-right: 5px;
+        }
+        .month-status-pill {
+            background: var(--bg-body);
+            border: 1px solid var(--border-color);
+            padding: 10px;
+            border-radius: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.85rem;
+        }
+        .month-status-pill.paid { border-color: rgba(16, 185, 129, 0.4); }
+        .month-status-pill.advance { border-color: rgba(249, 115, 22, 0.4); }
+        .month-status-pill.unpaid { border-color: rgba(239, 68, 68, 0.4); }
+        .month-status-pill.upcoming { border-color: rgba(59, 130, 246, 0.3); opacity: 0.85; }
+
+        /* Admin Month Selection Checkboxes */
+        .admin-months-select-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            margin-bottom: 20px;
+            max-height: 200px;
+            overflow-y: auto;
+            background: var(--bg-body);
+            padding: 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+        }
+        .month-checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.85rem;
+            cursor: pointer;
+            color: var(--text-main);
+            user-select: none;
+        }
+        .month-checkbox-label input {
+            width: 16px;
+            height: 16px;
+            margin: 0;
+            cursor: pointer;
+        }
+
+        /* Yearly rate inputs — stays a fixed, manageable height no matter
+           how many years the calendar has been extended to. Capped tight
+           on purpose so the scrollbar is obviously there from early on. */
+        .rate-inputs-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px 15px;
+            max-height: 140px;
+            overflow-y: scroll;
+            padding-right: 8px;
+            margin-bottom: 5px;
+        }
+        .rate-input-item label {
+            font-size: 0.75rem; color: var(--accent-blue); font-weight: bold;
+            display: block; margin-bottom: 4px;
+        }
+        .rate-input-item input {
+            width: 100%; padding: 8px; background: var(--bg-card);
+            border: 1px solid var(--border-color); border-radius: 6px;
+            color: white; outline: none;
+        }
+
+        .audit-list { list-style: none; }
+        .audit-item { padding: 15px 0; border-bottom: 1px solid var(--border-color); display: flex; gap: 15px; align-items: flex-start; }
+        .audit-time { color: var(--accent-blue); font-size: 0.8rem; min-width: 140px; }
+
+        /* Toast Notifications */
+        #toast-container { position: fixed; top: 20px; right: 20px; z-index: 1000; display: flex; flex-direction: column; gap: 10px; }
+        .toast {
+            background: #1e293b; border-left: 4px solid var(--accent-green);
+            padding: 15px 25px; border-radius: 6px; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5);
+            color: white; font-size: 0.9rem; font-weight: 500;
+            opacity: 0; transform: translateX(100%); transition: all 0.3s ease-in-out;
+        }
+        .toast.show { opacity: 1; transform: translateX(0); }
+
+        .hidden { display: none !important; }
+
+        /* Data Loading Overlay */
+        #loading-overlay {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: var(--bg-body); display: flex; flex-direction: column;
+            justify-content: center; align-items: center; z-index: 2000; gap: 15px;
+            transition: opacity 0.3s ease;
+        }
+        .loading-spinner {
+            width: 42px; height: 42px; border-radius: 50%;
+            border: 3px solid var(--border-color); border-top-color: var(--accent-orange);
+            animation: spin 0.8s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        #loading-overlay p { color: var(--text-muted); font-size: 0.9rem; }
+        #connection-banner {
+            position: fixed; top: 0; left: 0; width: 100%; padding: 8px; text-align: center;
+            font-size: 0.8rem; font-weight: 500; background: var(--accent-red); color: white;
+            z-index: 1500; display: none;
+        }
+
+        @media (max-width: 1024px) {
+            .stats-grid { grid-template-columns: repeat(3, 1fr); }
+            .months-grid-container { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 768px) {
+            header { flex-direction: column; gap: 15px; text-align: center; }
+            .stats-grid, .members-grid, .months-grid-container, .admin-months-select-grid, .rate-inputs-grid { grid-template-columns: 1fr; }
+            .search-box { width: 100%; }
+            .admin-tabs {
+                overflow-x: auto; -webkit-overflow-scrolling: touch;
+                justify-content: flex-start;
+            }
+            .admin-tabs .tab { flex-shrink: 0; white-space: nowrap; }
+            .action-btns { flex-wrap: wrap; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="toast-container"></div>
+    <div id="connection-banner">⚠ Connection issue — changes may not be saving. Check your internet connection.</div>
+
+    <div id="loading-overlay">
+        <div class="logo-circle" id="loading-overlay-logo" style="width:170px;height:170px;font-size:4.2rem;">AN</div>
+        <div class="loading-spinner"></div>
+        <p id="loading-overlay-text">Welcome to Anuanom 2016 Welfare — just a moment while we get things ready...</p>
+    </div>
+
+    <!-- Admin Authentication Modal -->
+    <div id="admin-auth-modal" class="modal-overlay">
+        <div class="modal">
+            <h3 style="margin-bottom: 5px;">Admin Authentication</h3>
+            <p>Please enter your admin email and password to access the dashboard.</p>
+            <form id="admin-login-form" onsubmit="event.preventDefault(); verifyAdminPassword();">
+                <input type="email" id="admin-email-input" autocomplete="username" placeholder="you@example.com" style="margin-bottom: 12px;">
+                <input type="password" id="admin-pass-input" autocomplete="current-password" placeholder="••••••••" style="text-align: center; font-size: 1.2rem; letter-spacing: 5px;">
+                <a class="forgot-pin-link" onclick="sendAdminPasswordReset()">Forgot admin password?</a>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-gray" style="flex: 1;" onclick="closeAdminAuthModal()">Cancel</button>
+                    <button type="submit" class="btn btn-green" style="flex: 1;">Login</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- PIN Authentication Modal -->
+    <div id="pin-modal" class="modal-overlay">
+        <div class="modal">
+            <h3 id="modal-member-name">Enter PIN</h3>
+            <p>Please enter your 4-digit PIN to access your personal welfare portal.</p>
+            <form id="pin-login-form" onsubmit="event.preventDefault(); verifyPin();">
+                <input type="hidden" id="pin-username-hint" autocomplete="username">
+                <input type="password" id="pin-input" maxlength="4" autocomplete="current-password" placeholder="••••" style="text-align: center; font-size: 1.2rem; letter-spacing: 5px;">
+                <a class="forgot-pin-link" onclick="openForgotPinModal()">Forgot PIN?</a>
+                <div class="modal-actions">
+                    <button type="button" class="btn btn-gray" style="flex: 1;" onclick="closePinModal()">Cancel</button>
+                    <button type="submit" class="btn btn-green" style="flex: 1;">Login</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Forgot PIN / Reset Modal -->
+    <div id="forgot-pin-modal" class="modal-overlay">
+        <div class="modal">
+            <h3 style="margin-bottom: 5px;">Reset PIN</h3>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 20px;">Verify your identity to reset your PIN.</p>
+            
+            <label class="form-label small left">Registered Phone Number</label>
+            <input type="text" id="reset-phone" placeholder="e.g. 0241112233">
+
+            <div id="forgot-pin-security-wrapper" class="hidden">
+                <label id="forgot-pin-security-question-text" class="form-label small left">Security Question</label>
+                <input type="text" id="reset-security-answer" placeholder="Your answer">
+            </div>
+
+            <label class="form-label small left">Create New PIN</label>
+            <input type="password" id="reset-new-pin" maxlength="4" placeholder="••••" style="text-align: center; font-size: 1.2rem; letter-spacing: 5px;">
+
+            <div class="modal-actions">
+                <button class="btn btn-gray" style="flex: 1;" onclick="closeForgotPinModal()">Cancel</button>
+                <button class="btn btn-green" style="flex: 1;" onclick="processForgotPin()">Reset PIN</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Member Help / FAQ Modal -->
+    <div id="help-faq-modal" class="modal-overlay">
+        <div class="modal" style="text-align: left; max-width: 480px;">
+            <h3 style="text-align: center; margin-bottom: 20px;">How This Portal Works</h3>
+
+            <p style="font-size: 0.85rem; color: var(--accent-blue); font-weight: bold; margin-bottom: 4px;">How do I log in?</p>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">Find your name in the list below, click it, and enter your 4-digit PIN.</p>
+
+            <p style="font-size: 0.85rem; color: var(--accent-blue); font-weight: bold; margin-bottom: 4px;">I forgot my PIN — what now?</p>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">Click your name, then "Forgot PIN?" — you'll verify with your registered phone number (and a security question too, if you've set one up) before choosing a new PIN.</p>
+
+            <p style="font-size: 0.85rem; color: var(--accent-blue); font-weight: bold; margin-bottom: 4px;">What's "Recovery Question" for?</p>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">An extra security step you can set up once you're logged in — it adds a second check before anyone can reset your PIN. Recommended, but optional.</p>
+
+            <p style="font-size: 0.85rem; color: var(--accent-blue); font-weight: bold; margin-bottom: 4px;">Why is there an "Alternate Phone" option?</p>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 15px;">If you have two phone numbers on file, either one works when verifying your identity to reset your PIN.</p>
+
+            <p style="font-size: 0.85rem; color: var(--accent-blue); font-weight: bold; margin-bottom: 4px;">Still stuck?</p>
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 20px;">Reach out to your association's admin — they can look up your account and help directly.</p>
+
+            <div class="modal-actions">
+                <button class="btn btn-green" style="flex: 1;" onclick="closeHelpModal()">Got it</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Change PIN (Inside Dashboard) Modal -->
+    <div id="change-pin-modal" class="modal-overlay">
+        <div class="modal">
+            <h3 style="margin-bottom: 20px;">Change Your PIN</h3>
+            <label class="form-label small left">Current PIN</label>
+            <input type="password" id="change-current-pin" maxlength="4" placeholder="••••" style="text-align: center; letter-spacing: 5px;">
+            
+            <label class="form-label small left">New 4-Digit PIN</label>
+            <input type="password" id="change-new-pin" maxlength="4" placeholder="••••" style="text-align: center; letter-spacing: 5px;">
+            
+            <div class="modal-actions">
+                <button class="btn btn-gray" style="flex: 1;" onclick="closeChangePinModal()">Cancel</button>
+                <button class="btn btn-blue" style="flex: 1;" onclick="processChangePin()">Update PIN</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Set Recovery/Security Question Modal -->
+    <div id="security-question-modal" class="modal-overlay">
+        <div class="modal" style="text-align: left;">
+            <h3 style="text-align: center; margin-bottom: 5px;">Set Recovery Question</h3>
+            <p style="text-align: center; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 20px;">This adds an extra check before anyone can reset your PIN — pick something only you would know.</p>
+
+            <label class="form-label small">Recovery Question</label>
+            <select id="security-question-select" onchange="toggleCustomQuestionInput()" style="width: 100%; padding: 10px; background: var(--bg-body); border: 1px solid var(--border-color); border-radius: 6px; color: white; outline: none; margin-bottom: 15px;">
+                <option value="">-- Choose a question --</option>
+                <option value="What is the name of your hometown?">What is the name of your hometown?</option>
+                <option value="What was the name of your first pet?">What was the name of your first pet?</option>
+                <option value="What is your mother's maiden name?">What is your mother's maiden name?</option>
+                <option value="What primary school did you attend?">What primary school did you attend?</option>
+                <option value="What is your favorite food?">What is your favorite food?</option>
+                <option value="custom">Write my own question</option>
+            </select>
+
+            <div id="custom-question-wrapper" class="hidden">
+                <label class="form-label small">Your Custom Question</label>
+                <input type="text" id="security-custom-question" placeholder="e.g. What street did I grow up on?">
+            </div>
+
+            <label class="form-label small">Your Answer</label>
+            <input type="text" id="security-answer-input" placeholder="Your answer">
+
+            <div class="modal-actions">
+                <button class="btn btn-gray" style="flex: 1;" onclick="closeSecurityQuestionModal()">Cancel</button>
+                <button class="btn btn-blue" style="flex: 1;" onclick="saveSecurityQuestion()">Save</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add Member Modal -->
+    <div id="add-member-modal" class="modal-overlay">
+        <div class="modal" style="text-align: left;">
+            <h3 style="text-align: center; margin-bottom: 5px;">Add New Member</h3>
+            <p style="text-align: center; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 20px;">Register a new member into the welfare directory.</p>
+            
+            <label class="form-label small">Full Name</label>
+            <input type="text" id="new-member-name" placeholder="e.g. Akosua Mensah">
+
+            <label class="form-label small">Phone Number</label>
+            <input type="text" id="new-member-phone" placeholder="e.g. 0241112233">
+
+            <label class="form-label small">Alternate Phone (optional)</label>
+            <input type="text" id="new-member-phone2" placeholder="e.g. second SIM or a family number">
+
+            <label class="form-label small">Initial 4-Digit PIN (Default: 1234)</label>
+            <input type="password" id="new-member-pin" maxlength="4" placeholder="1234">
+
+            <label class="form-label small">Member Since</label>
+            <select id="new-member-join-month" style="width: 100%; padding: 10px; background: var(--bg-body); border: 1px solid var(--border-color); border-radius: 6px; color: white; outline: none; margin-bottom: 15px;">
+                <!-- Injected via JS: defaults to the current month -->
+            </select>
+            <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: -10px; margin-bottom: 15px;">Dues only start counting from this month onward — someone joining partway through won't owe for months before they joined.</p>
+
+            <div class="modal-actions">
+                <button class="btn btn-gray" style="flex: 1;" onclick="closeAddMemberModal()">Cancel</button>
+                <button class="btn btn-green" style="flex: 1;" onclick="saveNewMember()">Add Member</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bulk Import Modal -->
+    <div id="bulk-import-modal" class="modal-overlay">
+        <div class="modal" style="text-align: left; max-width: 480px;">
+            <h3 style="text-align: center; margin-bottom: 5px;">Bulk Import Members</h3>
+            <p style="text-align: center; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 20px;">Upload a CSV file to add several members at once.</p>
+
+            <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 10px;">
+                Format: one member per line — <code>Name,Phone,PIN,AlternatePhone,JoinMonth</code> (only Name is required; PIN defaults to 1234, JoinMonth defaults to July 2026). If a name contains a comma, wrap it in quotes, e.g. <code>"Mensah, Kwame",0241112233,1234</code>. JoinMonth matters — members only start owing dues from that month onward, so someone who joined later shouldn't be given an earlier date.
+                <br><strong>Building this in Excel?</strong> Format the phone column as <strong>Text</strong> before typing numbers in (Excel otherwise strips leading zeros), and use "Save As" → <strong>CSV</strong> — not .xlsx — before uploading here.
+                <a class="forgot-pin-link" style="margin-top: 0;" onclick="downloadImportTemplate()">Download a template</a>
+            </p>
+
+            <input type="file" id="bulk-import-file-input" accept=".csv,text/csv,text/plain" onchange="handleBulkImportFileSelect(this)" style="margin-bottom: 15px;">
+
+            <div id="bulk-import-preview" style="max-height: 220px; overflow-y: auto; background: var(--bg-body); border: 1px solid var(--border-color); border-radius: 6px; padding: 12px; font-size: 0.8rem; color: var(--text-muted); margin-bottom: 15px;">
+                Choose a CSV file to see a preview here.
+            </div>
+
+            <div class="modal-actions">
+                <button class="btn btn-gray" style="flex: 1;" onclick="closeBulkImportModal()">Cancel</button>
+                <button class="btn btn-green" id="confirm-bulk-import-btn" style="flex: 1;" onclick="confirmBulkImport()" disabled>Confirm Import</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bulk Record Payment Modal -->
+    <div id="bulk-payment-modal" class="modal-overlay">
+        <div class="modal" style="text-align: left; max-width: 480px;">
+            <h3 style="text-align: center; margin-bottom: 5px;">Bulk Record Payment</h3>
+            <p style="text-align: center; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 20px;">Mark one month as paid for a whole group at once — handy right after a meeting where several people paid in cash.</p>
+
+            <label class="form-label small">Month to Mark as Paid</label>
+            <select id="bulk-payment-month" onchange="bulkPaymentSelectedIds = new Set(); renderBulkPaymentMemberList();" style="width: 100%; padding: 10px; background: var(--bg-body); border: 1px solid var(--border-color); border-radius: 6px; color: white; outline: none; margin-bottom: 15px;">
+                <!-- Injected via JS: current month and earlier only -->
+            </select>
+
+            <input type="text" id="bulk-payment-search" class="search-box" placeholder="Search member name..." style="width: 100%; margin-bottom: 10px;" onkeyup="renderBulkPaymentMemberList()">
+
+            <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                <button class="btn btn-gray" style="flex: 1; justify-content: center;" onclick="selectAllBulkPaymentVisible(true)">Select All (Visible)</button>
+                <button class="btn btn-gray" style="flex: 1; justify-content: center;" onclick="selectAllBulkPaymentVisible(false)">Deselect All</button>
+            </div>
+
+            <div id="bulk-payment-member-list" class="admin-months-select-grid" style="grid-template-columns: 1fr;">
+                <!-- Injected via JS -->
+            </div>
+            <p id="bulk-payment-count" style="font-size: 0.8rem; color: var(--text-muted); margin: 8px 0 15px;">0 members selected</p>
+
+            <div class="modal-actions">
+                <button class="btn btn-gray" style="flex: 1;" onclick="closeBulkPaymentModal()">Cancel</button>
+                <button class="btn btn-green" id="confirm-bulk-payment-btn" style="flex: 1;" onclick="confirmBulkPayment()">Confirm Payment</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Admin Payment & Advance Month Specification Modal -->
+    <div id="payment-modal" class="modal-overlay">
+        <div class="modal" style="text-align: left;">
+            <h3 id="payment-modal-title" style="text-align: center; margin-bottom: 5px;">Record Payment & Advance Months</h3>
+            <p id="payment-member-info" style="color: var(--text-muted); font-size: 0.85rem; margin-bottom: 15px; text-align: center;"></p>
+            
+            <div class="admin-months-select-grid" id="admin-months-checkboxes">
+                <!-- Injected via JS -->
+            </div>
+
+            <label id="payment-homecoming-label" style="font-size: 0.8rem; color: var(--accent-purple); display: block; margin-bottom: 5px; font-weight: bold;">Homecoming Fund Contribution (GH¢)</label>
+            <input type="number" id="payment-homecoming-amount" placeholder="0.00" min="0" step="any">
+
+            <div class="modal-actions" style="margin-top: 15px;">
+                <button class="btn btn-gray" style="flex: 1;" onclick="closePaymentModal()">Cancel</button>
+                <button class="btn btn-green" style="flex: 1;" onclick="recordPayment()">Save Payment</button>
+            </div>
+        </div>
+    </div>
+
+    <header>
+        <div class="logo-section">
+            <div class="logo-circle" id="header-logo">AN</div>
+            <div class="logo-text">
+                <h1>ANUANOM 2016 WELFARE</h1>
+                <p id="portal-subtitle">Member Portal — Monthly Contributions Schedule</p>
+            </div>
+        </div>
+        <button id="toggle-portal-btn" class="admin-btn" onclick="initiateAdminToggle()">Admin Login</button>
+    </header>
+
+    <main>
+        <!-- ADMIN TABS -->
+        <div id="admin-tabs" class="admin-tabs hidden">
+            <div class="tab active" onclick="switchAdminTab('ledger', this)">Directory & Ledger</div>
+            <div class="tab" onclick="switchAdminTab('defaulters', this)">Defaulters</div>
+            <div class="tab" onclick="switchAdminTab('reports', this)">Reports</div>
+            <div class="tab" onclick="switchAdminTab('audit', this)">Audit Trail</div>
+            <div class="tab" onclick="switchAdminTab('settings', this)">Settings</div>
+        </div>
+
+        <!-- HERO SECTION (Member Selection View) -->
+        <div id="member-hero" class="hero">
+            <div class="logo-circle" id="hero-logo">AN</div>
+            <h2>Welcome to Anuanom 2016 Welfare</h2>
+            <p>Akim Swedru Senior High School Old Students Association. Monthly contributions start in <strong>July 2026</strong>.<br>Select your name below and enter your PIN to login.</p>
+            <a class="forgot-pin-link" style="margin-top: 15px;" onclick="openHelpModal()">❓ New here? How this works</a>
+            <div id="hero-fund-banner" style="margin-top: 20px;"></div>
+        </div>
+
+        <!-- PERSONAL MEMBER DASHBOARD (Hidden until logged in) -->
+        <div id="member-dashboard" class="hero hidden" style="text-align: left; padding: 30px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; flex-wrap: wrap; gap: 15px;">
+                <div>
+                    <h2 id="logged-in-name" style="font-size: 1.5rem; color: var(--accent-orange);"></h2>
+                    <p style="color: var(--text-muted);">Personal Welfare Statement & Contribution Status</p>
+                </div>
+                <div style="display: flex; gap: 10px;">
+                    <button class="btn btn-blue" onclick="openChangePinModal()">Change PIN</button>
+                    <button class="btn btn-blue" onclick="openSecurityQuestionModal()">Recovery Question</button>
+                    <button class="btn btn-purple" onclick="downloadMemberPDF()">Download PDF Statement</button>
+                    <button class="btn btn-gray" onclick="memberLogout()">Logout Portal</button>
+                </div>
+            </div>
+            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 25px;">
+                <div class="stat-card" style="background: var(--bg-body);">
+                    <div class="stat-title">Total Dues Paid</div>
+                    <div class="stat-value val-green" id="my-dues">GH¢ 0.00</div>
+                </div>
+                <div class="stat-card" style="background: var(--bg-body);">
+                    <div class="stat-title">Total Arrears Owed</div>
+                    <div class="stat-value val-red" id="my-owed">GH¢ 0.00</div>
+                </div>
+                <div class="stat-card" style="background: var(--bg-body);">
+                    <div class="stat-title">Advanced Amount</div>
+                    <div class="stat-value val-orange" id="my-advance-amount">GH¢ 0.00</div>
+                </div>
+                <div class="stat-card" style="background: var(--bg-body);">
+                    <div class="stat-title" id="my-homecoming-label">Homecoming Fund</div>
+                    <div class="stat-value val-purple" id="my-homecoming">GH¢ 0.00</div>
+                    <div id="my-homecoming-countdown"></div>
+                    <div id="my-homecoming-thanks"></div>
+                </div>
+            </div>
+
+            <h3 style="font-size: 1rem; color: var(--accent-blue); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 15px;">Month-by-Month Status</h3>
+            <div class="months-grid-container" id="my-months-grid">
+                <!-- Injected via JS -->
+            </div>
+        </div>
+
+        <!-- STATS GRID -->
+        <div class="stats-grid">
+            <div class="stat-card">
+                <div class="stat-title">MEMBERS</div>
+                <div class="stat-value val-white" id="stat-members">0</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-title">ACTIVE RATE</div>
+                <div class="stat-value val-cyan" id="stat-rate-active">GH¢ 20.00</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-title">TOTAL DUES</div>
+                <div class="stat-value val-green" id="stat-dues">GH¢ 0.00</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-title">ARREARS</div>
+                <div class="stat-value val-red" id="stat-arrears">GH¢ 0.00</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-title">ADVANCE AMT</div>
+                <div class="stat-value val-orange" id="stat-advance">GH¢ 0.00</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-title" id="stat-homecoming-label">HOMECOMING</div>
+                <div class="stat-value val-purple" id="stat-homecoming">GH¢ 0.00</div>
+            </div>
+        </div>
+
+        <!-- MEMBER LOGIN SELECTION -->
+        <div id="member-selection-section">
+            <div class="login-header">
+                <h3>SELECT NAME TO LOGIN</h3>
+                <input type="text" id="member-search" class="search-box" placeholder="Search member name..." onkeyup="filterMemberCards()">
+            </div>
+            <div class="members-grid" id="member-cards-container">
+                <!-- Injected via JS -->
+            </div>
+            <div id="member-cards-pagination" style="display: flex; justify-content: center; align-items: center; gap: 15px; margin-top: 15px;">
+                <!-- Injected via JS -->
+            </div>
+        </div>
+
+        <!-- ADMIN DASHBOARD SECTION -->
+        <div id="admin-dashboard-section" class="dashboard-content hidden">
+            <div id="view-only-banner" class="hidden">👁 You're logged in as a secondary admin — you can view and export everything, but changes are restricted to the main admin.</div>
+            <div id="admin-ledger-view">
+                <div id="ledger-fund-banner"></div>
+                <div class="table-header-controls">
+                    <div class="table-title-group">
+                        <h3>ALPHABETICAL DIRECTORY & MONTHLY LEDGER</h3>
+                        <div class="filter-pills">
+                            <div class="pill active" onclick="filterTableStatus('All', this)">All</div>
+                            <div class="pill" onclick="filterTableStatus('Paid', this)">Fully Paid</div>
+                            <div class="pill" onclick="filterTableStatus('Owing', this)">Owing</div>
+                        </div>
+                    </div>
+                    <div class="table-actions">
+                        <input type="text" id="admin-table-search" class="search-box" placeholder="Search member..." style="width: 160px;" onkeyup="filterAdminTable()">
+                        <button class="btn btn-green main-admin-only" onclick="openAddMemberModal()">+ Add Member</button>
+                        <button class="btn btn-blue main-admin-only" onclick="openBulkImportModal()">⬆ Bulk Import</button>
+                        <button class="btn btn-purple main-admin-only" onclick="openBulkPaymentModal()">📅 Bulk Record Payment</button>
+                        <button class="btn btn-blue" onclick="exportToCSV()">⬇ Export CSV</button>
+                    </div>
+                </div>
+                <div class="table-wrapper">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>MEMBER NAME</th>
+                                <th>STATUS</th>
+                                <th>PAID & ADVANCED MONTHS</th>
+                                <th>OWED MONTHS / ARREARS</th>
+                                <th>LAST LOGIN</th>
+                                <th id="ledger-homecoming-header">HOMECOMING</th>
+                                <th>ACTIONS</th>
+                            </tr>
+                        </thead>
+                        <tbody id="admin-table-body">
+                            <!-- Injected via JS -->
+                        </tbody>
+                    </table>
+                </div>
+                <div id="admin-table-pagination" style="display: flex; justify-content: center; align-items: center; gap: 15px; margin-top: 15px;">
+                    <!-- Injected via JS -->
+                </div>
+            </div>
+
+            <div id="admin-defaulters-view" class="hidden">
+                <div class="table-header-controls">
+                    <h3>DEFAULTERS REPORT — WORST ARREARS FIRST</h3>
+                    <div class="table-actions">
+                        <button class="btn btn-blue" onclick="downloadDefaultersPDF()">⬇ Download PDF</button>
+                    </div>
+                </div>
+                <div id="defaulters-report-content">
+                    <div class="table-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>MEMBER NAME</th>
+                                    <th>PHONE</th>
+                                    <th>MONTHS OVERDUE</th>
+                                    <th>AMOUNT OWED</th>
+                                </tr>
+                            </thead>
+                            <tbody id="defaulters-table-body">
+                                <!-- Injected via JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div id="admin-reports-view" class="hidden">
+                <div class="table-header-controls">
+                    <h3>MONTHLY COLLECTIONS — ALL MEMBERS</h3>
+                </div>
+                <div style="background: var(--bg-body); border: 1px solid var(--border-color); border-radius: 8px; padding: 20px; margin-bottom: 25px;">
+                    <canvas id="collections-chart" height="90"></canvas>
+                </div>
+
+                <div class="table-header-controls">
+                    <h3>CUMULATIVE ARREARS TREND</h3>
+                </div>
+                <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 15px;">How much is owed in total, month by month, based on current payment records. A rising line means arrears are building up; a falling line means the association is catching up.</p>
+                <div style="background: var(--bg-body); border: 1px solid var(--border-color); border-radius: 8px; padding: 20px;">
+                    <canvas id="arrears-trend-chart" height="90"></canvas>
+                </div>
+            </div>
+
+            <div id="admin-audit-view" class="hidden">
+                <div class="table-header-controls">
+                    <h3>SYSTEM AUDIT TRAIL</h3>
+                    <div class="table-actions">
+                        <button class="btn btn-blue" onclick="exportFullAuditLog()">⬇ Export Full History (CSV)</button>
+                    </div>
+                </div>
+                <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 15px;">This list shows the most recent 200 entries. Use the export button for the complete history.</p>
+                <ul class="audit-list" id="audit-list-container">
+                    <!-- Injected via JS -->
+                </ul>
+            </div>
+
+            <div id="admin-settings-view" class="hidden">
+                <div class="table-header-controls">
+                    <h3>ASSOCIATION SETTINGS — LOGO & RATES</h3>
+                </div>
+                <div style="max-width: 450px; background: var(--bg-body); padding: 25px; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 20px;">
+                    <label style="font-size: 0.85rem; color: var(--accent-blue); display: block; margin-bottom: 12px; font-weight: bold;">Association Logo</label>
+                    <div style="display: flex; align-items: center; gap: 18px; margin-bottom: 15px;">
+                        <div class="logo-upload-preview" id="logo-preview">AN</div>
+                        <div style="flex-grow: 1;">
+                            <input type="file" id="logo-file-input" accept="image/*" onchange="handleLogoFileSelect(this)" style="display:none;">
+                            <button type="button" class="btn btn-gray main-admin-only" style="width: 100%; justify-content: center; margin-bottom: 8px;" onclick="document.getElementById('logo-file-input').click()">Choose Image</button>
+                            <p style="font-size: 0.75rem; color: var(--text-muted);">PNG/JPG, under 400KB works best.</p>
+                        </div>
+                    </div>
+                    <div style="display: flex; gap: 10px;">
+                        <button class="btn btn-green main-admin-only" id="save-logo-btn" style="flex-grow: 1; justify-content: center;" onclick="saveLogo()">Save Logo</button>
+                        <button class="btn btn-gray main-admin-only" style="flex-grow: 1; justify-content: center;" onclick="removeLogo()">Remove Logo</button>
+                    </div>
+                </div>
+                <div style="max-width: 450px; background: var(--bg-body); padding: 25px; border-radius: 8px; border: 1px solid var(--border-color);">
+                    <label class="form-label">Select Active Viewing/Dashboard Year</label>
+                    <select id="settings-active-year" onchange="onActiveYearChange()" style="width: 100%; padding: 10px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 6px; color: white; outline: none; margin-bottom: 20px;">
+                        <!-- Injected via JS: one option per calendar year -->
+                    </select>
+
+                    <label style="font-size: 0.85rem; color: var(--accent-blue); display: block; margin-bottom: 8px; font-weight: bold;">Monthly Due Rates ↕ scroll for more years</label>
+                    <div id="settings-rates-container" class="rate-inputs-grid">
+                        <!-- Injected via JS: one rate field per calendar year -->
+                    </div>
+
+                    <button class="btn btn-green main-admin-only" id="save-rates-btn" onclick="saveAssociationSettings()" style="width: 100%; justify-content: center;">Save Rates & Active Year</button>
+                </div>
+
+                <div style="max-width: 450px; background: var(--bg-body); padding: 25px; border-radius: 8px; border: 1px solid var(--border-color); margin-top: 20px;">
+                    <label class="form-label">Extend Welfare Calendar</label>
+                    <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 15px;">The calendar currently runs through December <strong id="settings-calendar-end-year-display">2028</strong>. Add more years here before it runs out — new years start at the same rate as the last year, editable above afterward.</p>
+                    <input type="number" id="settings-extend-year" placeholder="e.g. 2029" style="width: 100%; padding: 10px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 6px; color: white; outline: none; margin-bottom: 15px;">
+                    <button class="btn btn-blue main-admin-only" style="width: 100%; justify-content: center;" onclick="extendCalendar()">Extend Calendar</button>
+                </div>
+
+                <div style="max-width: 450px; background: var(--bg-body); padding: 25px; border-radius: 8px; border: 1px solid var(--border-color); margin-top: 20px;">
+                    <label class="form-label">Temporary Contribution Fund</label>
+                    <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 10px;">This is the "Homecoming Fund" field — rename it whenever a different special, time-limited collection comes up (a funeral contribution, a graduation contribution, etc.). Starting a round shows a countdown to <strong>every</strong> member — even ones who haven't contributed yet — so people are reminded to join in.</p>
+                    <p id="settings-fund-status" style="font-size: 0.85rem; margin-bottom: 15px;"></p>
+
+                    <label class="form-label">Fund Name</label>
+                    <input type="text" id="settings-fund-label" value="Homecoming Fund" style="width: 100%; padding: 10px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 6px; color: white; outline: none; margin-bottom: 15px;">
+
+                    <label class="form-label">Runs For (days)</label>
+                    <input type="number" id="settings-fund-expiry-days" value="120" min="1" max="365" step="1" style="width: 100%; padding: 10px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 6px; color: white; outline: none; margin-bottom: 20px;">
+
+                    <button class="btn btn-green main-admin-only" id="save-fund-settings-btn" style="width: 100%; justify-content: center; margin-bottom: 10px;" onclick="saveSpecialFundSettings()">Start / Restart Fund Round</button>
+                    <button class="btn btn-gray main-admin-only" style="width: 100%; justify-content: center;" onclick="endFundRound(false)">End Round Now</button>
+                </div>
+
+                <div style="max-width: 450px; background: var(--bg-body); padding: 25px; border-radius: 8px; border: 1px solid var(--border-color); margin-top: 20px;">
+                    <label class="form-label">Admin Access</label>
+                    <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 15px;">You (<strong id="main-admin-email-display"></strong>) have full control. Everyone added below can log in, view everything, and export reports — but can't add/remove members, edit payments, or change settings.</p>
+
+                    <div id="secondary-admin-list" style="margin-bottom: 15px;">
+                        <!-- Injected via JS -->
+                    </div>
+
+                    <input type="email" id="new-secondary-admin-email" placeholder="colleague@example.com" style="width: 100%; padding: 10px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 6px; color: white; outline: none; margin-bottom: 10px;">
+                    <button class="btn btn-blue main-admin-only" style="width: 100%; justify-content: center;" onclick="addSecondaryAdmin()">+ Add Admin</button>
+                    <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 10px;">Note: adding an email here only grants the role — that person still needs their own account created in Firebase Authentication (same way yours was) before they can actually log in.</p>
+                </div>
+
+                <div style="max-width: 450px; background: var(--bg-body); padding: 25px; border-radius: 8px; border: 1px solid var(--border-color); margin-top: 20px;">
+                    <label class="form-label">Data Backup</label>
+                    <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 15px;">Download every member, payment record, and the full audit trail as one file — keep it somewhere safe as an insurance copy.</p>
+                    <button class="btn btn-blue" style="width: 100%; justify-content: center;" onclick="downloadFullBackup()">⬇ Download Full Backup</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer style="text-align: center; padding: 20px; color: var(--accent-blue); font-size: 0.8rem;">
+        © 2026 Anuanom 2016 Welfare Association. Akim Swedru Senior High School Old Students Association.
+    </footer>
+
+    <script>
+        // ============================================================
+        // FIREBASE SETUP — see SETUP-GUIDE.md for step-by-step instructions
+        // ============================================================
+        // 1. Create a free project at https://console.firebase.google.com
+        // 2. Enable "Firestore Database" (production mode) and "Authentication"
+        //    -> Sign-in method -> Email/Password (enable it).
+        // 3. In Authentication -> Users, add each admin's account (main admin
+        //    plus any secondary/view-only admins) with their own email and
+        //    password. The login form asks for both, so any of them can log
+        //    in with their own credentials — see MAIN_ADMIN_EMAIL below for
+        //    how the app tells the main admin apart from everyone else.
+        // 4. Project settings -> General -> "Your apps" -> Web app -> copy the
+        //    config object below.
+        // 5. Paste your Firestore security rules from SETUP-GUIDE.md.
+        const firebaseConfig = {
+            apiKey: "AIzaSyBf6C1rSMXqJ2-XOt3RAcc3EUFkwL5kKMM",
+            authDomain: "anuanom-welfaree.firebaseapp.com",
+            projectId: "anuanom-welfaree",
+            storageBucket: "anuanom-welfaree.firebasestorage.app",
+            messagingSenderId: "868050603937",
+            appId: "1:868050603937:web:369b329a406600e71605e0"
+        };
+        // The one account with full read/write control — everything else
+        // (adding secondary admins, changing this) happens through the app
+        // itself once you're logged in as this account. Secondary admins are
+        // managed entirely in Settings -> Admin Access, not here in code.
+        const MAIN_ADMIN_EMAIL = "anuanom390@gmail.com";
+        let secondaryAdminEmails = [];
+        let currentAdminRole = null; // 'main' | 'secondary' | null
+
+        // Instantly show the logo from last time this device loaded the portal,
+        // rather than the plain "AN" placeholder, while we wait for Firestore.
+        // This is just a local, cosmetic cache — the real logo always comes
+        // from Firestore once it responds, this only smooths out that wait.
+        try {
+            const cachedLogo = localStorage.getItem('anuanom_cached_logo');
+            if (cachedLogo) {
+                document.getElementById('loading-overlay-logo').innerHTML = `<img src="${cachedLogo}" alt="Logo">`;
+            }
+        } catch (e) {
+            // localStorage unavailable (private browsing, etc.) — the plain
+            // placeholder and default message are a perfectly fine fallback.
+        }
+
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+        const auth = firebase.auth();
+
+        const membersCol = db.collection('members');
+        const settingsDoc = db.collection('settings').doc('association');
+        const auditCol = db.collection('auditLogs');
+
+        let firestoreReady = { members: false, settings: false, audit: false };
+        function markReady(key) {
+            firestoreReady[key] = true;
+            if (firestoreReady.members && firestoreReady.settings && firestoreReady.audit) {
+                document.getElementById('loading-overlay').style.opacity = '0';
+                setTimeout(() => document.getElementById('loading-overlay').classList.add('hidden'), 300);
+            }
+        }
+        function showConnectionIssue(show) {
+            document.getElementById('connection-banner').style.display = show ? 'block' : 'none';
+        }
+
+        const CALENDAR_START_YEAR = 2026;
+        let calendarEndYear = 2028;
+
+        function generateWelfareMonths(startYear, endYear) {
+            const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+            const months = [];
+            for (let year = startYear; year <= endYear; year++) {
+                const fromMonth = (year === startYear) ? 6 : 0; // association's cycle starts in July
+                for (let m = fromMonth; m < 12; m++) {
+                    months.push(`${monthNames[m]} ${year}`);
+                }
+            }
+            return months;
+        }
+
+        let welfareMonths = generateWelfareMonths(CALENDAR_START_YEAR, calendarEndYear);
+
+        // These are now just local caches, kept in sync live from Firestore below.
+        let ratesByYear = { '2026': 20.00, '2027': 20.00, '2028': 20.00 };
+        let activeYear = '2026';
+        let logoData = null;
+        let pendingLogoData = null;
+
+        function renderLogo() {
+            const html = logoData ? `<img src="${logoData}" alt="Logo">` : 'AN';
+            const headerLogo = document.getElementById('header-logo');
+            const heroLogo = document.getElementById('hero-logo');
+            const loadingLogo = document.getElementById('loading-overlay-logo');
+            if (headerLogo) headerLogo.innerHTML = html;
+            if (heroLogo) heroLogo.innerHTML = html;
+            if (loadingLogo) loadingLogo.innerHTML = html;
+            applyBackgroundFromLogo();
+        }
+
+        function rgbToHsl(r, g, b) {
+            r /= 255; g /= 255; b /= 255;
+            const max = Math.max(r, g, b), min = Math.min(r, g, b);
+            let h, s, l = (max + min) / 2;
+            if (max === min) { h = s = 0; }
+            else {
+                const d = max - min;
+                s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+                switch (max) {
+                    case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+                    case g: h = (b - r) / d + 2; break;
+                    case b: h = (r - g) / d + 4; break;
+                }
+                h /= 6;
+            }
+            return { h: h * 360, s: s * 100, l: l * 100 };
+        }
+
+        function applyBackgroundFromLogo() {
+            const root = document.documentElement.style;
+            if (!logoData) {
+                // No logo — go back to the original default dark navy theme.
+                root.removeProperty('--bg-body');
+                root.removeProperty('--bg-card');
+                root.removeProperty('--bg-card-hover');
+                return;
+            }
+
+            const img = new Image();
+            img.onload = () => {
+                try {
+                    const size = 24;
+                    const canvas = document.createElement('canvas');
+                    canvas.width = size; canvas.height = size;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, size, size);
+                    const data = ctx.getImageData(0, 0, size, size).data;
+
+                    let r = 0, g = 0, b = 0, count = 0;
+                    for (let i = 0; i < data.length; i += 4) {
+                        if (data[i + 3] < 100) continue; // skip near-transparent pixels
+                        r += data[i]; g += data[i + 1]; b += data[i + 2];
+                        count++;
+                    }
+                    if (count === 0) return;
+                    const hsl = rgbToHsl(r / count, g / count, b / count);
+                    const sat = Math.min(hsl.s, 40); // keep it muted, never garish
+
+                    // Same hue family as the logo, but kept dark so the existing
+                    // light-colored text stays readable on top of it.
+                    root.setProperty('--bg-body', `hsl(${hsl.h.toFixed(0)}, ${sat.toFixed(0)}%, 6%)`);
+                    root.setProperty('--bg-card', `hsl(${hsl.h.toFixed(0)}, ${sat.toFixed(0)}%, 10%)`);
+                    root.setProperty('--bg-card-hover', `hsl(${hsl.h.toFixed(0)}, ${sat.toFixed(0)}%, 15%)`);
+                } catch (e) {
+                    console.error('Could not read logo colors for background tint:', e);
+                }
+            };
+            img.src = logoData;
+        }
+
+        let isAdminView = false;
+        let currentTableFilter = 'All';
+        let adminTablePage = 1;
+        const ADMIN_TABLE_PAGE_SIZE = 20;
+        let selectedMemberId = null;
+        let activePaymentMemberId = null;
+        let loggedInMember = null;
+
+        let membersData = [];
+        let auditLogs = [];
+
+        function logAudit(action) {
+            auditCol.add({
+                time: new Date().toLocaleString(),
+                action: action,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            }).catch(err => {
+                console.error('Audit log write failed:', err);
+                showConnectionIssue(true);
+            });
+        }
+
+        // ------------------------------------------------------------
+        // LIVE LISTENERS — every browser (admin or member) viewing the
+        // portal stays in sync automatically as data changes.
+        // ------------------------------------------------------------
+        membersCol.onSnapshot(snapshot => {
+            showConnectionIssue(false);
+            membersData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+            renderStats();
+            renderAdminTable(document.getElementById('admin-table-search') ? document.getElementById('admin-table-search').value : '');
+            renderMemberCards(document.getElementById('member-search') ? document.getElementById('member-search').value : '');
+
+            if (loggedInMember) {
+                const fresh = membersData.find(m => m.id === loggedInMember.id);
+                if (fresh) {
+                    loggedInMember = fresh;
+                    const fin = getMemberFinancials(loggedInMember);
+                    document.getElementById('my-dues').innerText = formatCurrency(fin.duesPaid);
+                    document.getElementById('my-owed').innerText = formatCurrency(fin.duesOwed);
+                    document.getElementById('my-advance-amount').innerText = formatCurrency(fin.advanceAmount);
+                    document.getElementById('my-homecoming').innerText = formatCurrency(loggedInMember.homecoming);
+                    document.getElementById('my-homecoming-countdown').innerHTML = getFundCampaignBadgeHTML();
+                    document.getElementById('my-homecoming-thanks').innerHTML = getFundThankYouHTML(loggedInMember);
+                    renderMemberMonthsGrid();
+                } else {
+                    // Admin removed this member while they were logged in.
+                    memberLogout();
+                }
+            }
+            markReady('members');
+        }, err => {
+            console.error('Members listener error:', err);
+            showConnectionIssue(true);
+            markReady('members');
+        });
+
+        settingsDoc.onSnapshot(doc => {
+            showConnectionIssue(false);
+            if (doc.exists) {
+                const data = doc.data();
+                ratesByYear = data.ratesByYear || ratesByYear;
+                activeYear = data.activeYear || activeYear;
+                logoData = data.logoData || null;
+                try {
+                    if (logoData) {
+                        localStorage.setItem('anuanom_cached_logo', logoData);
+                    } else {
+                        localStorage.removeItem('anuanom_cached_logo');
+                    }
+                } catch (e) {
+                    // localStorage unavailable — no big deal, just means the
+                    // loading screen won't have a cached logo to show early.
+                }
+                specialFundLabel = data.specialFundLabel || specialFundLabel;
+                specialFundExpiryDays = data.specialFundExpiryDays || specialFundExpiryDays;
+                specialFundStartedAt = data.specialFundStartedAt || null;
+                secondaryAdminEmails = data.secondaryAdminEmails || [];
+
+                const newEndYear = data.calendarEndYear || calendarEndYear;
+                if (newEndYear !== calendarEndYear) {
+                    calendarEndYear = newEndYear;
+                    welfareMonths = generateWelfareMonths(CALENDAR_START_YEAR, calendarEndYear);
+                }
+            }
+            // If it doesn't exist yet, we just keep using the in-memory defaults
+            // above — the document gets created the first time an admin saves
+            // settings (writes require sign-in, so an unauthenticated visitor
+            // can never create it, which is intentional).
+            renderStats();
+            renderLogo();
+            renderSpecialFundLabels();
+            renderMemberMonthsGrid();
+            renderAdminTable(document.getElementById('admin-table-search') ? document.getElementById('admin-table-search').value : '');
+            if (isAdminView) {
+                renderActiveYearOptions();
+                renderRateInputs();
+                document.getElementById('logo-preview').innerHTML = logoData ? `<img src="${logoData}" alt="Logo">` : 'AN';
+                renderAdminAccessList();
+            }
+            markReady('settings');
+        }, err => {
+            console.error('Settings listener error:', err);
+            showConnectionIssue(true);
+            markReady('settings');
+        });
+
+        auditCol.orderBy('createdAt', 'desc').limit(200).onSnapshot(snapshot => {
+            showConnectionIssue(false);
+            auditLogs = snapshot.docs.map(doc => doc.data());
+            const container = document.getElementById('audit-list-container');
+            if (container && !document.getElementById('admin-audit-view').classList.contains('hidden')) {
+                container.innerHTML = auditLogs.map(l => `<li class="audit-item"><span class="audit-time">${escapeHtml(l.time)}</span><span>${escapeHtml(l.action)}</span></li>`).join('');
+            }
+            markReady('audit');
+        }, err => {
+            console.error('Audit log listener error:', err);
+            showConnectionIssue(true);
+            markReady('audit');
+        });
+
+        function formatCurrency(amount) { return `GH¢ ${(amount || 0).toFixed(2)}`; }
+        function getInitials(name) { return name.charAt(0).toUpperCase(); }
+
+        // Escapes text before it's inserted via innerHTML, so a member/fund
+        // name containing HTML or script-like characters can never execute
+        // or corrupt the page — it just displays as plain, literal text.
+        function escapeHtml(value) {
+            if (value === null || value === undefined) return '';
+            return String(value)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function getCurrentMonthIndex() {
+            const now = new Date();
+            const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+            const currentStr = `${monthNames[now.getMonth()]} ${now.getFullYear()}`;
+            let currIdx = welfareMonths.indexOf(currentStr);
+            if (currIdx === -1) {
+                currIdx = (now.getFullYear() > calendarEndYear || (now.getFullYear() === calendarEndYear && now.getMonth() > 11)) ? welfareMonths.length - 1 : 0;
+            }
+            return currIdx;
+        }
+
+        let specialFundLabel = 'Homecoming Fund';
+        let specialFundExpiryDays = 120;
+        let specialFundStartedAt = null;
+
+        function renderSpecialFundLabels() {
+            const el = (id) => document.getElementById(id);
+            if (el('my-homecoming-label')) el('my-homecoming-label').innerText = specialFundLabel;
+            if (el('stat-homecoming-label')) el('stat-homecoming-label').innerText = specialFundLabel.toUpperCase();
+            if (el('ledger-homecoming-header')) el('ledger-homecoming-header').innerText = specialFundLabel.toUpperCase();
+            if (el('payment-homecoming-label')) el('payment-homecoming-label').innerText = `${specialFundLabel} Contribution (GH¢)`;
+            if (el('settings-fund-label')) el('settings-fund-label').value = specialFundLabel;
+            if (el('settings-fund-expiry-days')) el('settings-fund-expiry-days').value = specialFundExpiryDays;
+
+            const banner = getFundCampaignBannerHTML();
+            if (el('hero-fund-banner')) el('hero-fund-banner').innerHTML = banner;
+            if (el('ledger-fund-banner')) el('ledger-fund-banner').innerHTML = banner;
+            if (el('settings-fund-status')) {
+                el('settings-fund-status').innerHTML = getFundCampaignBadgeHTML() || '<span style="color: var(--text-muted); font-size: 0.8rem;">No round currently running.</span>';
+            }
+        }
+
+        // Campaign-wide countdown — the SAME for every member, whether they've
+        // contributed yet or not, so people who haven't paid in still see that
+        // a temporary fund is running and are prompted to join in.
+        function getFundCampaignDaysLeft() {
+            if (!specialFundStartedAt) return null;
+            const daysElapsed = (Date.now() - new Date(specialFundStartedAt).getTime()) / (1000 * 60 * 60 * 24);
+            return Math.ceil(specialFundExpiryDays - daysElapsed);
+        }
+
+        // Green at the start, sliding through orange, ending red as the
+        // deadline approaches — three color stops, interpolated smoothly.
+        function getTimerGradientColor(percentElapsed) {
+            const green = [16, 185, 129];
+            const orange = [249, 115, 22];
+            const red = [239, 68, 68];
+            let c1, c2, t;
+            if (percentElapsed <= 0.5) {
+                c1 = green; c2 = orange; t = percentElapsed / 0.5;
+            } else {
+                c1 = orange; c2 = red; t = (percentElapsed - 0.5) / 0.5;
+            }
+            return [0, 1, 2].map(i => Math.round(c1[i] + (c2[i] - c1[i]) * t));
+        }
+
+        function getFundThankYouHTML(member) {
+            if (!member || !member.homecoming || member.homecoming <= 0) return '';
+            return `<div style="margin-top: 8px; font-size: 0.8rem; color: var(--accent-purple); font-weight: 500;">🙏 Thank you for contributing to the ${escapeHtml(specialFundLabel)}!</div>`;
+        }
+
+        function getFundCampaignBadgeHTML() {
+            if (!specialFundStartedAt) return '';
+            const daysElapsedRaw = (Date.now() - new Date(specialFundStartedAt).getTime()) / (1000 * 60 * 60 * 24);
+            const percentElapsed = Math.min(1, Math.max(0, daysElapsedRaw / specialFundExpiryDays));
+            const daysLeft = Math.ceil(specialFundExpiryDays - daysElapsedRaw);
+            const text = daysLeft <= 0 ? 'Closing soon' : `${daysLeft} day${daysLeft === 1 ? '' : 's'} left`;
+
+            const [r, g, b] = getTimerGradientColor(percentElapsed);
+            const solid = `rgb(${r}, ${g}, ${b})`;
+            const soft = `rgba(${r}, ${g}, ${b}, 0.15)`;
+            const border = `rgba(${r}, ${g}, ${b}, 0.5)`;
+            const percentRemaining = (1 - percentElapsed) * 100;
+
+            return `<div class="homecoming-timer-badge" style="background: ${soft}; border: 1px solid ${border}; color: ${solid};">
+                <span>⏳ ${text}</span>
+                <div class="timer-progress-track"><div class="timer-progress-fill" style="width: ${percentRemaining}%; background: ${solid};"></div></div>
+            </div>`;
+        }
+
+        function getFundCampaignBannerHTML() {
+            if (!specialFundStartedAt) return '';
+            return `<div class="fund-campaign-banner">
+                <div class="fund-campaign-name">${escapeHtml(specialFundLabel)}</div>
+                ${getFundCampaignBadgeHTML()}
+            </div>`;
+        }
+
+
+        function checkHomecomingExpirations() {
+            // Only the admin session has write access to the settings/members
+            // fields involved (see Firestore rules), so this only actually
+            // takes effect while someone is logged into the admin dashboard —
+            // it runs every time that happens, which is the closest a fully
+            // client-side app can get to an automatic background expiry
+            // without a paid server.
+            const daysLeft = getFundCampaignDaysLeft();
+            if (daysLeft === null || daysLeft > 0) return;
+
+            endFundRound(true);
+        }
+
+        function endFundRound(isAutoExpiry = false) {
+            if (!isAutoExpiry) {
+                const daysLeft = getFundCampaignDaysLeft();
+                if (daysLeft === null) {
+                    showToast('No fund round is currently running.', true);
+                    return;
+                }
+                if (!confirm(`End the "${specialFundLabel}" round now? This clears everyone's contributed amount immediately.`)) {
+                    return;
+                }
+            }
+
+            const contributors = membersData.filter(m => m.homecoming && m.homecoming > 0);
+            const batch = db.batch();
+            contributors.forEach(m => {
+                batch.update(membersCol.doc(m.id), { homecoming: 0 });
+            });
+            batch.set(settingsDoc, { specialFundStartedAt: null }, { merge: true });
+
+            batch.commit()
+                .then(() => {
+                    const reason = isAutoExpiry ? `expired after ${specialFundExpiryDays} days` : 'was ended early by admin';
+                    logAudit(`${specialFundLabel} round ${reason}. ${contributors.length} contribution(s) cleared.`);
+                    showToast(isAutoExpiry ? `${specialFundLabel} round expired and was cleared.` : `${specialFundLabel} round ended.`);
+                })
+                .catch(err => console.error('Ending fund round failed:', err));
+        }
+
+        // Falls back to the current active year's real rate (not a stale
+        // hardcoded number) if a specific year's rate is ever missing —
+        // this should basically never trigger in practice, since rates are
+        // always fully populated when a year is added, but if it ever does,
+        // it uses today's actual rate rather than an old placeholder value.
+        function getRateForYear(year) {
+            if (ratesByYear[year] !== undefined) return ratesByYear[year];
+            if (ratesByYear[activeYear] !== undefined) return ratesByYear[activeYear];
+            return 20.00; // last-resort fallback if truly nothing is set
+        }
+
+        function getMemberFinancials(member) {
+            const currIdx = getCurrentMonthIndex();
+            const paidMonths = member.paidMonths || [];
+            // Members who joined after July 2026 shouldn't owe dues for months
+            // before they existed — default to index 0 (the association's
+            // founding) for any existing member with no join date recorded,
+            // so nothing changes for the 129 members already in the system.
+            const joinIdx = member.joinMonth ? welfareMonths.indexOf(member.joinMonth) : 0;
+            const startIdx = joinIdx === -1 ? 0 : joinIdx;
+
+            let owedMonths = [];
+            let duesPaid = 0;
+            let duesOwed = 0;
+            let advanceAmount = 0;
+
+            welfareMonths.forEach((m, idx) => {
+                if (idx < startIdx) return; // not a member yet during this month
+
+                const year = m.split(' ')[1];
+                const rate = getRateForYear(year);
+
+                if (paidMonths.includes(m)) {
+                    duesPaid += rate;
+                    if (idx > currIdx) {
+                        advanceAmount += rate;
+                    }
+                }
+
+                if (idx <= currIdx && !paidMonths.includes(m)) {
+                    owedMonths.push(m);
+                    duesOwed += rate;
+                }
+            });
+
+            const paidAdvance = paidMonths.filter(m => welfareMonths.indexOf(m) > currIdx);
+
+            return { duesPaid, duesOwed, owedMonths, paidAdvance, advanceAmount, startIdx };
+        }
+
+        function showToast(message, isError = false) {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            toast.className = 'toast';
+            if(isError) toast.style.borderLeftColor = 'var(--accent-red)';
+            toast.innerText = message;
+            container.appendChild(toast);
+            setTimeout(() => toast.classList.add('show'), 10);
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        function renderStats() {
+            let totalDuesPaid = 0;
+            let totalArrears = 0;
+            let totalHomecoming = 0;
+            let totalAdvanceAmount = 0;
+
+            membersData.forEach(m => {
+                const fin = getMemberFinancials(m);
+                totalDuesPaid += fin.duesPaid;
+                totalArrears += fin.duesOwed;
+                totalHomecoming += m.homecoming || 0;
+                totalAdvanceAmount += fin.advanceAmount;
+            });
+
+            document.getElementById('stat-members').innerText = membersData.length;
+            document.getElementById('stat-rate-active').innerText = `${formatCurrency(getRateForYear(activeYear))} (${activeYear})`;
+            document.getElementById('stat-dues').innerText = formatCurrency(totalDuesPaid);
+            document.getElementById('stat-arrears').innerText = formatCurrency(totalArrears);
+            document.getElementById('stat-advance').innerText = formatCurrency(totalAdvanceAmount);
+            document.getElementById('stat-homecoming').innerText = formatCurrency(totalHomecoming);
+        }
+
+        let memberCardsPage = 1;
+        const MEMBER_CARDS_PAGE_SIZE = 24;
+
+        function renderMemberCards(searchTerm = '') {
+            const container = document.getElementById('member-cards-container');
+            const filtered = membersData.filter(m => m.name.toLowerCase().includes(searchTerm.toLowerCase()));
+
+            const totalPages = Math.max(1, Math.ceil(filtered.length / MEMBER_CARDS_PAGE_SIZE));
+            if (memberCardsPage > totalPages) memberCardsPage = totalPages;
+            const pageStart = (memberCardsPage - 1) * MEMBER_CARDS_PAGE_SIZE;
+            const pageItems = filtered.slice(pageStart, pageStart + MEMBER_CARDS_PAGE_SIZE);
+            
+            container.innerHTML = pageItems.map(member => `
+                <div class="member-card" onclick="openPinModal('${member.id}')">
+                    <div class="member-avatar">${escapeHtml(getInitials(member.name))}</div>
+                    <div class="member-info">
+                        <h4>${escapeHtml(member.name)}</h4>
+                        <p>🔒 Enter PIN</p>
+                    </div>
+                </div>
+            `).join('');
+
+            const paginationEl = document.getElementById('member-cards-pagination');
+            if (paginationEl) {
+                if (totalPages <= 1) {
+                    paginationEl.innerHTML = '';
+                } else {
+                    paginationEl.innerHTML = `
+                        <button class="btn btn-gray" style="padding: 6px 14px;" ${memberCardsPage === 1 ? 'disabled' : ''} onclick="changeMemberCardsPage(-1)">‹ Prev</button>
+                        <span style="color: var(--text-muted); font-size: 0.85rem;">Page ${memberCardsPage} of ${totalPages} (${filtered.length} members)</span>
+                        <button class="btn btn-gray" style="padding: 6px 14px;" ${memberCardsPage === totalPages ? 'disabled' : ''} onclick="changeMemberCardsPage(1)">Next ›</button>
+                    `;
+                }
+            }
+        }
+
+        function changeMemberCardsPage(delta) {
+            memberCardsPage += delta;
+            renderMemberCards(document.getElementById('member-search') ? document.getElementById('member-search').value : '');
+        }
+
+        function initiateAdminToggle() {
+            if (isAdminView) {
+                executeAdminToggle(false);
+            } else {
+                document.getElementById('admin-pass-input').value = '';
+                document.getElementById('admin-auth-modal').classList.add('active');
+                document.getElementById('admin-pass-input').focus();
+            }
+        }
+
+        function closeAdminAuthModal() {
+            document.getElementById('admin-auth-modal').classList.remove('active');
+        }
+
+        function verifyAdminPassword() {
+            const enteredEmail = document.getElementById('admin-email-input').value.trim();
+            const enteredPass = document.getElementById('admin-pass-input').value;
+            const loginBtn = document.querySelector('#admin-auth-modal .btn-green');
+            loginBtn.innerText = 'Verifying...';
+            loginBtn.disabled = true;
+
+            auth.signInWithEmailAndPassword(enteredEmail, enteredPass)
+                .then(() => {
+                    const enteredEmailLower = enteredEmail.toLowerCase();
+                    if (enteredEmailLower === MAIN_ADMIN_EMAIL.toLowerCase()) {
+                        currentAdminRole = 'main';
+                    } else if (secondaryAdminEmails.map(e => e.toLowerCase()).includes(enteredEmailLower)) {
+                        currentAdminRole = 'secondary';
+                    } else {
+                        auth.signOut();
+                        showToast('This account is not set up as an admin here.', true);
+                        loginBtn.innerText = 'Login';
+                        loginBtn.disabled = false;
+                        return;
+                    }
+                    closeAdminAuthModal();
+                    executeAdminToggle(true);
+                    logAudit(`Admin authentication successful (${currentAdminRole === 'main' ? 'main admin' : 'secondary admin'}: ${enteredEmail}). Portal unlocked.`);
+                    loginBtn.innerText = 'Login';
+                    loginBtn.disabled = false;
+                    // Nudges Chrome's password-save heuristic, which otherwise
+                    // often doesn't recognize a purely JS-driven login (no real
+                    // page submission) as something worth offering to save.
+                    try { history.pushState({}, '', location.href); } catch (e) {}
+                })
+                .catch(err => {
+                    console.error('Admin sign-in failed:', err);
+                    showToast("Incorrect email or password.", true);
+                    loginBtn.innerText = 'Login';
+                    loginBtn.disabled = false;
+                });
+        }
+
+        function sendAdminPasswordReset() {
+            const email = document.getElementById('admin-email-input').value.trim();
+            if (!email) {
+                showToast('Enter your admin email above first.', true);
+                return;
+            }
+            if (!confirm(`Send a password reset link to ${email}?`)) return;
+
+            auth.sendPasswordResetEmail(email)
+                .then(() => {
+                    showToast(`Reset link sent to ${email} — check that inbox.`);
+                })
+                .catch(err => {
+                    console.error('Password reset email failed:', err);
+                    showToast('Could not send the reset email — check your connection and try again.', true);
+                });
+        }
+
+        function applyAdminRoleRestrictions() {
+            const isSecondary = currentAdminRole === 'secondary';
+            document.querySelectorAll('.main-admin-only').forEach(el => {
+                el.disabled = isSecondary;
+            });
+            document.getElementById('view-only-banner').classList.toggle('hidden', !isSecondary);
+        }
+
+        function executeAdminToggle(turnAdminOn) {
+            isAdminView = turnAdminOn;
+            const subtitle = document.getElementById('portal-subtitle');
+            const toggleBtn = document.getElementById('toggle-portal-btn');
+            const adminTabs = document.getElementById('admin-tabs');
+            const memberHero = document.getElementById('member-hero');
+            const memberSelection = document.getElementById('member-selection-section');
+            const memberDashboard = document.getElementById('member-dashboard');
+            const adminDashboard = document.getElementById('admin-dashboard-section');
+
+            if (isAdminView) {
+                subtitle.innerText = currentAdminRole === 'main'
+                    ? "Admin Portal Active — Monthly Contributions Schedule"
+                    : "Admin Portal Active (View Only) — Monthly Contributions Schedule";
+                toggleBtn.innerText = "Exit Admin";
+                toggleBtn.classList.add('active');
+                memberHero.classList.add('hidden');
+                memberSelection.classList.add('hidden');
+                memberDashboard.classList.add('hidden');
+                adminTabs.classList.remove('hidden');
+                adminDashboard.classList.remove('hidden');
+                
+                renderActiveYearOptions();
+                renderRateInputs();
+                document.getElementById('logo-preview').innerHTML = logoData ? `<img src="${logoData}" alt="Logo">` : 'AN';
+                renderSpecialFundLabels();
+                renderAdminAccessList();
+                applyAdminRoleRestrictions();
+                showToast(currentAdminRole === 'main' ? 'Admin Portal Active' : 'Admin Portal Active — view only');
+                if (currentAdminRole === 'main') {
+                    checkHomecomingExpirations();
+                }
+            } else {
+                subtitle.innerText = "Member Portal — Monthly Contributions Schedule";
+                toggleBtn.innerText = "Admin Login";
+                toggleBtn.classList.remove('active');
+                adminTabs.classList.add('hidden');
+                adminDashboard.classList.add('hidden');
+                if(!loggedInMember) {
+                    memberHero.classList.remove('hidden');
+                    memberSelection.classList.remove('hidden');
+                } else {
+                    memberDashboard.classList.remove('hidden');
+                }
+                currentAdminRole = null;
+                auth.signOut().catch(err => console.error('Sign-out error:', err));
+                showToast('Member Portal Active');
+            }
+        }
+
+        function openPinModal(id) {
+            selectedMemberId = id;
+            const member = membersData.find(m => m.id === id);
+            document.getElementById('modal-member-name').innerText = `Login: ${member.name}`;
+            document.getElementById('pin-username-hint').value = member.name;
+            document.getElementById('pin-input').value = '';
+            document.getElementById('pin-modal').classList.add('active');
+            document.getElementById('pin-input').focus();
+        }
+
+        function closePinModal() {
+            document.getElementById('pin-modal').classList.remove('active');
+        }
+
+        function openForgotPinModal() {
+            closePinModal(); 
+            document.getElementById('forgot-pin-modal').classList.add('active');
+            document.getElementById('reset-phone').value = '';
+            document.getElementById('reset-new-pin').value = '';
+            document.getElementById('reset-security-answer').value = '';
+
+            const member = membersData.find(m => m.id === selectedMemberId);
+            const wrapper = document.getElementById('forgot-pin-security-wrapper');
+            if (member && member.securityQuestion) {
+                document.getElementById('forgot-pin-security-question-text').innerText = member.securityQuestion;
+                wrapper.classList.remove('hidden');
+            } else {
+                wrapper.classList.add('hidden');
+            }
+        }
+
+        function closeForgotPinModal() {
+            document.getElementById('forgot-pin-modal').classList.remove('active');
+            selectedMemberId = null;
+        }
+
+        function openHelpModal() {
+            document.getElementById('help-faq-modal').classList.add('active');
+        }
+
+        function closeHelpModal() {
+            document.getElementById('help-faq-modal').classList.remove('active');
+        }
+
+        function processForgotPin() {
+            const phone = document.getElementById('reset-phone').value.trim();
+            const newPin = document.getElementById('reset-new-pin').value.trim();
+            const member = membersData.find(m => m.id === selectedMemberId);
+
+            if (phone !== member.phone && phone !== member.phone2) {
+                showToast('Phone number does not match our records.', true);
+                return;
+            }
+
+            let usedSecurityQuestion = false;
+            if (member.securityQuestion) {
+                const answer = document.getElementById('reset-security-answer').value.trim().toLowerCase();
+                if (!answer || answer !== member.securityAnswer) {
+                    showToast('Security answer is incorrect.', true);
+                    return;
+                }
+                usedSecurityQuestion = true;
+            }
+
+            if (newPin.length !== 4 || isNaN(newPin)) {
+                showToast('New PIN must be exactly 4 digits.', true);
+                return;
+            }
+
+            membersCol.doc(member.id).update({ pin: newPin })
+                .then(() => {
+                    logAudit(`${member.name} reset their forgotten PIN via phone${usedSecurityQuestion ? ' + security question' : ''} verification.`);
+                    closeForgotPinModal();
+                    showToast('PIN successfully reset! Logging you in...');
+                    loginMember({ ...member, pin: newPin });
+                })
+                .catch(err => {
+                    console.error('PIN reset failed:', err);
+                    showToast('Could not reset PIN — check your connection and try again.', true);
+                });
+        }
+
+        function openChangePinModal() {
+            document.getElementById('change-pin-modal').classList.add('active');
+            document.getElementById('change-current-pin').value = '';
+            document.getElementById('change-new-pin').value = '';
+        }
+
+        function closeChangePinModal() {
+            document.getElementById('change-pin-modal').classList.remove('active');
+        }
+
+        function processChangePin() {
+            const currentPin = document.getElementById('change-current-pin').value.trim();
+            const newPin = document.getElementById('change-new-pin').value.trim();
+
+            if (currentPin !== loggedInMember.pin) {
+                showToast('Current PIN is incorrect.', true);
+                return;
+            }
+            if (newPin.length !== 4 || isNaN(newPin)) {
+                showToast('New PIN must be exactly 4 digits.', true);
+                return;
+            }
+
+            membersCol.doc(loggedInMember.id).update({ pin: newPin })
+                .then(() => {
+                    loggedInMember.pin = newPin;
+                    logAudit(`${loggedInMember.name} updated their PIN from the dashboard.`);
+                    closeChangePinModal();
+                    showToast('PIN successfully updated!');
+                })
+                .catch(err => {
+                    console.error('PIN update failed:', err);
+                    showToast('Could not update PIN — check your connection and try again.', true);
+                });
+        }
+
+        function openSecurityQuestionModal() {
+            document.getElementById('security-question-modal').classList.add('active');
+            const select = document.getElementById('security-question-select');
+            const customWrapper = document.getElementById('custom-question-wrapper');
+            const customInput = document.getElementById('security-custom-question');
+
+            if (loggedInMember.securityQuestion) {
+                const presetValues = Array.from(select.options).map(o => o.value);
+                if (presetValues.includes(loggedInMember.securityQuestion)) {
+                    select.value = loggedInMember.securityQuestion;
+                    customWrapper.classList.add('hidden');
+                } else {
+                    select.value = 'custom';
+                    customWrapper.classList.remove('hidden');
+                    customInput.value = loggedInMember.securityQuestion;
+                }
+            } else {
+                select.value = '';
+                customWrapper.classList.add('hidden');
+                customInput.value = '';
+            }
+            document.getElementById('security-answer-input').value = ''; // never pre-fill the answer
+        }
+
+        function toggleCustomQuestionInput() {
+            const select = document.getElementById('security-question-select');
+            document.getElementById('custom-question-wrapper').classList.toggle('hidden', select.value !== 'custom');
+        }
+
+        function closeSecurityQuestionModal() {
+            document.getElementById('security-question-modal').classList.remove('active');
+        }
+
+        function saveSecurityQuestion() {
+            const select = document.getElementById('security-question-select');
+            let question = select.value;
+            if (question === 'custom') {
+                question = document.getElementById('security-custom-question').value.trim();
+            }
+            const answer = document.getElementById('security-answer-input').value.trim();
+
+            if (!question) {
+                showToast('Please choose or write a question.', true);
+                return;
+            }
+            if (!answer) {
+                showToast('Please enter an answer.', true);
+                return;
+            }
+
+            membersCol.doc(loggedInMember.id).update({
+                securityQuestion: question,
+                securityAnswer: answer.toLowerCase()
+            })
+                .then(() => {
+                    loggedInMember.securityQuestion = question;
+                    loggedInMember.securityAnswer = answer.toLowerCase();
+                    logAudit(`${loggedInMember.name} set up a PIN-recovery security question.`);
+                    closeSecurityQuestionModal();
+                    showToast('Recovery question saved!');
+                })
+                .catch(err => {
+                    console.error('Saving security question failed:', err);
+                    showToast('Could not save — check your connection and try again.', true);
+                });
+        }
+
+        function verifyPin() {
+            const enteredPin = document.getElementById('pin-input').value;
+            const member = membersData.find(m => m.id === selectedMemberId);
+
+            if (enteredPin === member.pin) {
+                closePinModal();
+                loginMember(member);
+                try { history.pushState({}, '', location.href); } catch (e) {}
+            } else {
+                showToast('Incorrect PIN. If you forgot, click "Forgot PIN?".', true);
+            }
+        }
+
+        function loginMember(member) {
+            loggedInMember = member;
+            const loginTime = new Date().toLocaleString();
+            loggedInMember.lastLogin = loginTime;
+
+            membersCol.doc(member.id).update({ lastLogin: loginTime }).catch(err => {
+                console.error('Could not record last login:', err);
+            });
+            logAudit(`Member portal login: ${member.name}.`);
+
+            document.getElementById('member-hero').classList.add('hidden');
+            document.getElementById('member-selection-section').classList.add('hidden');
+            
+            const dash = document.getElementById('member-dashboard');
+            dash.classList.remove('hidden');
+            document.getElementById('logged-in-name').innerText = `Welcome Back, ${member.name}`;
+            
+            const fin = getMemberFinancials(member);
+            document.getElementById('my-dues').innerText = formatCurrency(fin.duesPaid);
+            document.getElementById('my-owed').innerText = formatCurrency(fin.duesOwed);
+            document.getElementById('my-advance-amount').innerText = formatCurrency(fin.advanceAmount);
+            document.getElementById('my-homecoming').innerText = formatCurrency(member.homecoming);
+            document.getElementById('my-homecoming-countdown').innerHTML = getFundCampaignBadgeHTML();
+            document.getElementById('my-homecoming-thanks').innerHTML = getFundThankYouHTML(member);
+
+            renderMemberMonthsGrid();
+            renderAdminTable();
+            showToast(`Successfully logged in as ${member.name}`);
+        }
+
+        function renderMemberMonthsGrid() {
+            if (!loggedInMember) return;
+            const currIdx = getCurrentMonthIndex();
+            const joinIdxRaw = loggedInMember.joinMonth ? welfareMonths.indexOf(loggedInMember.joinMonth) : 0;
+            const joinIdx = joinIdxRaw === -1 ? 0 : joinIdxRaw;
+            const monthsGrid = document.getElementById('my-months-grid');
+
+            monthsGrid.innerHTML = welfareMonths.map((month, idx) => {
+                if (idx < joinIdx) {
+                    return `
+                        <div class="month-status-pill" style="opacity: 0.5;">
+                            <span style="color: #ffffff; background-color: #0a0e17;"><strong>${month}</strong></span>
+                            <span class="badge" style="background: rgba(148, 163, 184, 0.15); color: var(--text-muted); border: 1px solid rgba(148, 163, 184, 0.3);">Not a Member Yet</span>
+                        </div>
+                    `;
+                }
+
+                const isPaid = (loggedInMember.paidMonths || []).includes(month);
+
+                let badgeText = 'Unpaid';
+                let badgeClass = 'badge-red';
+                let pillClass = 'unpaid';
+
+                if (isPaid) {
+                    if (idx > currIdx) {
+                        badgeText = 'Paid in Advance';
+                        badgeClass = 'badge-orange';
+                        pillClass = 'advance';
+                    } else {
+                        badgeText = 'Paid';
+                        badgeClass = 'badge-green';
+                        pillClass = 'paid';
+                    }
+                } else {
+                    if (idx > currIdx) {
+                        badgeText = 'Upcoming';
+                        badgeClass = 'badge-blue';
+                        pillClass = 'upcoming';
+                    } else {
+                        badgeText = 'Owed';
+                        badgeClass = 'badge-red';
+                        pillClass = 'unpaid';
+                    }
+                }
+
+                return `
+                    <div class="month-status-pill ${pillClass}">
+                        <span style="color: #ffffff; background-color: #0a0e17;"><strong>${month}</strong></span>
+                        <span class="badge ${badgeClass}">${badgeText}</span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function memberLogout() {
+            loggedInMember = null;
+            document.getElementById('member-dashboard').classList.add('hidden');
+            document.getElementById('member-hero').classList.remove('hidden');
+            document.getElementById('member-selection-section').classList.remove('hidden');
+            showToast('Logged out successfully');
+        }
+
+        function downloadMemberPDF() {
+            if (!loggedInMember) return;
+
+            const element = document.getElementById('member-dashboard');
+            const buttonsContainer = element.querySelector('div[style*="justify-content: space-between"] div:nth-child(2)');
+            if(buttonsContainer) buttonsContainer.style.display = 'none';
+
+            const opt = {
+                margin:       10,
+                filename:     `Anuanom_Welfare_Statement_${loggedInMember.name.replace(/\s+/g, '_')}.pdf`,
+                image:        { type: 'jpeg', quality: 0.98 },
+                html2canvas:  { scale: 2, useCORS: true, backgroundColor: '#121929' },
+                jsPDF:        { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+
+            html2pdf().from(element).set(opt).save().then(() => {
+                if(buttonsContainer) buttonsContainer.style.display = 'flex';
+                showToast('PDF Statement downloaded successfully');
+            }).catch(err => {
+                if(buttonsContainer) buttonsContainer.style.display = 'flex';
+                console.error('PDF generation failed:', err);
+                showToast('Could not generate the PDF — please try again.', true);
+            });
+        }
+
+        function openAddMemberModal() {
+            document.getElementById('new-member-name').value = '';
+            document.getElementById('new-member-phone').value = '';
+            document.getElementById('new-member-phone2').value = '';
+            document.getElementById('new-member-pin').value = '1234';
+
+            const currIdx = getCurrentMonthIndex();
+            const joinSelect = document.getElementById('new-member-join-month');
+            joinSelect.innerHTML = welfareMonths
+                .map((m, idx) => `<option value="${idx}" ${idx === currIdx ? 'selected' : ''}>${m}</option>`)
+                .join('');
+
+            document.getElementById('add-member-modal').classList.add('active');
+            document.getElementById('new-member-name').focus();
+        }
+
+        function closeAddMemberModal() {
+            document.getElementById('add-member-modal').classList.remove('active');
+        }
+
+        function findDuplicateMember(name, phone, excludeId = null) {
+            const normName = name.trim().toLowerCase();
+            const normPhone = (phone || '').trim();
+            return membersData.find(m => {
+                if (excludeId && m.id === excludeId) return false;
+                const nameMatch = m.name.trim().toLowerCase() === normName;
+                const phoneMatch = normPhone && ((m.phone && m.phone.trim() === normPhone) || (m.phone2 && m.phone2.trim() === normPhone));
+                return nameMatch || phoneMatch;
+            }) || null;
+        }
+
+        function saveNewMember() {
+            const name = document.getElementById('new-member-name').value.trim();
+            const phone = document.getElementById('new-member-phone').value.trim();
+            const phone2 = document.getElementById('new-member-phone2').value.trim();
+            const pin = document.getElementById('new-member-pin').value.trim() || '1234';
+            const joinMonthIdx = parseInt(document.getElementById('new-member-join-month').value, 10);
+            const joinMonth = welfareMonths[joinMonthIdx] || welfareMonths[0];
+
+            if (!name) {
+                showToast('Please enter the member\'s name', true);
+                return;
+            }
+
+            const duplicate = findDuplicateMember(name, phone);
+            if (duplicate) {
+                const reason = duplicate.name.trim().toLowerCase() === name.trim().toLowerCase() ? 'the same name' : 'the same phone number';
+                if (!confirm(`${duplicate.name} already exists with ${reason}. Add this member anyway?`)) {
+                    return;
+                }
+            }
+
+            const newMember = {
+                name: name,
+                pin: pin,
+                phone: phone || '0240000000',
+                phone2: phone2 || null,
+                paidMonths: [],
+                homecoming: 0.00,
+                lastLogin: null,
+                joinMonth: joinMonth
+            };
+
+            const saveBtn = document.querySelector('#add-member-modal .btn-green');
+            saveBtn.innerText = 'Saving...';
+            saveBtn.disabled = true;
+
+            membersCol.add(newMember)
+                .then(() => {
+                    logAudit(`Added new member: ${name}.`);
+                    closeAddMemberModal();
+                    showToast(`Successfully added ${name}`);
+                })
+                .catch(err => {
+                    console.error('Add member failed:', err);
+                    showToast('Could not add member — check your connection and try again.', true);
+                })
+                .finally(() => {
+                    saveBtn.innerText = 'Add Member';
+                    saveBtn.disabled = false;
+                });
+        }
+
+        function deleteMember(memberId) {
+            const member = membersData.find(m => m.id === memberId);
+            if (!member) return;
+
+            if (confirm(`Are you sure you want to remove ${member.name} from the welfare system?`)) {
+                membersCol.doc(memberId).delete()
+                    .then(() => {
+                        logAudit(`Removed member: ${member.name}.`);
+                        showToast(`Removed ${member.name} from directory`);
+                    })
+                    .catch(err => {
+                        console.error('Delete member failed:', err);
+                        showToast('Could not remove member — check your connection and try again.', true);
+                    });
+            }
+        }
+
+        function adminResetMemberPin(memberId) {
+            const member = membersData.find(m => m.id === memberId);
+            if (!member) return;
+
+            const newPin = prompt(`Enter a new 4-digit PIN for ${member.name}.\n\nOnly do this after verifying their identity yourself (phone call, in person, etc.) — this bypasses their phone/security-question check entirely.`);
+            if (newPin === null) return; // cancelled
+            if (!/^\d{4}$/.test(newPin)) {
+                showToast('PIN must be exactly 4 digits.', true);
+                return;
+            }
+
+            membersCol.doc(memberId).update({ pin: newPin })
+                .then(() => {
+                    logAudit(`Admin manually reset the PIN for ${member.name}.`);
+                    showToast(`PIN reset for ${member.name}.`);
+                })
+                .catch(err => {
+                    console.error('Admin PIN reset failed:', err);
+                    showToast('Could not reset PIN — check your connection and try again.', true);
+                });
+        }
+
+        function openPaymentModal(memberId) {
+            activePaymentMemberId = memberId;
+            const member = membersData.find(m => m.id === memberId);
+            document.getElementById('payment-member-info').innerText = `Specify paid & advanced months for ${member.name}`;
+            
+            const joinIdxRaw = member.joinMonth ? welfareMonths.indexOf(member.joinMonth) : 0;
+            const joinIdx = joinIdxRaw === -1 ? 0 : joinIdxRaw;
+
+            const checkboxContainer = document.getElementById('admin-months-checkboxes');
+            checkboxContainer.innerHTML = welfareMonths.map((month, idx) => {
+                const isChecked = (member.paidMonths || []).includes(month) ? 'checked' : '';
+                const beforeJoin = idx < joinIdx;
+                return `
+                    <label class="month-checkbox-label" style="${beforeJoin ? 'opacity: 0.4;' : ''}">
+                        <input type="checkbox" name="admin-month-cb" value="${month}" ${isChecked}>
+                        <span>${month}${beforeJoin ? ' (before joining)' : ''}</span>
+                    </label>
+                `;
+            }).join('');
+
+            document.getElementById('payment-homecoming-amount').value = member.homecoming > 0 ? member.homecoming : '';
+            document.getElementById('payment-modal').classList.add('active');
+        }
+
+        function closePaymentModal() {
+            document.getElementById('payment-modal').classList.remove('active');
+            activePaymentMemberId = null;
+        }
+
+        function recordPayment() {
+            const member = membersData.find(m => m.id === activePaymentMemberId);
+            if (!member) return;
+
+            const checkboxes = document.querySelectorAll('input[name="admin-month-cb"]');
+            let newPaidMonths = [];
+            checkboxes.forEach(cb => {
+                if (cb.checked) newPaidMonths.push(cb.value);
+            });
+
+            newPaidMonths.sort((a, b) => welfareMonths.indexOf(a) - welfareMonths.indexOf(b));
+
+            const joinIdxRaw = member.joinMonth ? welfareMonths.indexOf(member.joinMonth) : 0;
+            const joinIdx = joinIdxRaw === -1 ? 0 : joinIdxRaw;
+
+            let selectedIndices = newPaidMonths.map(m => welfareMonths.indexOf(m)).sort((a, b) => a - b);
+            if (selectedIndices.length > 0) {
+                let maxIdx = selectedIndices[selectedIndices.length - 1];
+                for (let i = joinIdx; i <= maxIdx; i++) {
+                    if (!selectedIndices.includes(i)) {
+                        showToast(`Validation Error: Cannot pay for advance month "${welfareMonths[maxIdx]}" while previous month "${welfareMonths[i]}" is unpaid/owed!`, true);
+                        return;
+                    }
+                }
+            }
+
+            const homecomingInput = parseFloat(document.getElementById('payment-homecoming-amount').value) || 0;
+            const saveBtn = document.querySelector('#payment-modal .btn-green');
+            saveBtn.innerText = 'Saving...';
+            saveBtn.disabled = true;
+
+            const updateData = { paidMonths: newPaidMonths, homecoming: homecomingInput };
+
+            membersCol.doc(member.id).update(updateData)
+                .then(() => {
+                    logAudit(`Payment & advanced months updated for ${member.name}. Paid/Advance Months: [${newPaidMonths.join(', ')}] | ${specialFundLabel}: GH¢ ${homecomingInput}.`);
+                    closePaymentModal();
+                    // The live members listener refreshes stats/table/cards and the
+                    // logged-in member's own dashboard automatically — no manual re-render needed.
+                    showToast(`Payment and advanced months updated for ${member.name}`);
+                })
+                .catch(err => {
+                    console.error('Record payment failed:', err);
+                    showToast('Could not save payment — check your connection and try again.', true);
+                })
+                .finally(() => {
+                    saveBtn.innerText = 'Save Payment';
+                    saveBtn.disabled = false;
+                });
+        }
+
+        function renderAdminTable(searchTerm = '') {
+            const tbody = document.getElementById('admin-table-body');
+            let filtered = membersData.filter(m => m.name.toLowerCase().includes(searchTerm.toLowerCase()));
+            
+            filtered = filtered.map(m => ({ ...m, fin: getMemberFinancials(m) }));
+
+            if(currentTableFilter === 'Paid') filtered = filtered.filter(m => m.fin.duesOwed === 0);
+            if(currentTableFilter === 'Owing') filtered = filtered.filter(m => m.fin.duesOwed > 0);
+
+            const totalPages = Math.max(1, Math.ceil(filtered.length / ADMIN_TABLE_PAGE_SIZE));
+            if (adminTablePage > totalPages) adminTablePage = totalPages;
+            const pageStart = (adminTablePage - 1) * ADMIN_TABLE_PAGE_SIZE;
+            const pageItems = filtered.slice(pageStart, pageStart + ADMIN_TABLE_PAGE_SIZE);
+
+            const currIdx = getCurrentMonthIndex();
+
+            tbody.innerHTML = pageItems.map(member => {
+                const isFullyPaid = member.fin.duesOwed === 0;
+                const statusBadge = isFullyPaid 
+                    ? `<span class="badge badge-green">Fully Paid</span>`
+                    : `<span class="badge badge-red">Arrears</span>`;
+                
+                let monthsDisplay = [];
+                (member.paidMonths || []).forEach(m => {
+                    const mIdx = welfareMonths.indexOf(m);
+                    if (mIdx > currIdx) {
+                        monthsDisplay.push(`<span class="text-orange">${m} (Adv)</span>`);
+                    } else {
+                        monthsDisplay.push(`<span class="text-green">${m}</span>`);
+                    }
+                });
+
+                const paidMonthsStr = monthsDisplay.length > 0 
+                    ? monthsDisplay.join(', ') 
+                    : `<span style="color:var(--text-muted)">None</span>`;
+
+                const owedMonthsStr = member.fin.owedMonths.length > 0 && member.fin.duesOwed > 0
+                    ? `<span class="text-red">${member.fin.owedMonths.join(', ')}</span>` 
+                    : `<span class="text-green">All Cleared</span>`;
+
+                const lastLoginStr = member.lastLogin 
+                    ? `<span style="font-size:0.85rem; color:var(--text-main);">${member.lastLogin}</span>` 
+                    : `<span style="color:var(--text-muted); font-size:0.85rem;">Never</span>`;
+
+                return `
+                <tr>
+                    <td style="font-weight: 500;">${escapeHtml(member.name)} <br><span style="font-size: 0.75rem; color: var(--text-muted)">${escapeHtml(member.phone)}${member.phone2 ? ' / ' + escapeHtml(member.phone2) : ''}</span></td>
+                    <td>${statusBadge}</td>
+                    <td>${paidMonthsStr}</td>
+                    <td>${owedMonthsStr}</td>
+                    <td>${lastLoginStr}</td>
+                    <td class="val-purple">${formatCurrency(member.homecoming)}</td>
+                    <td>
+                        <div class="action-btns">
+                            <button class="action-link main-admin-only" onclick="openPaymentModal('${member.id}')">Edit Months</button>
+                            <button class="action-link main-admin-only" onclick="adminResetMemberPin('${member.id}')">Reset PIN</button>
+                            <button class="action-link danger main-admin-only" onclick="deleteMember('${member.id}')">Remove</button>
+                        </div>
+                    </td>
+                </tr>
+            `}).join('');
+            applyAdminRoleRestrictions();
+
+            const paginationEl = document.getElementById('admin-table-pagination');
+            if (paginationEl) {
+                if (totalPages <= 1) {
+                    paginationEl.innerHTML = '';
+                } else {
+                    paginationEl.innerHTML = `
+                        <button class="btn btn-gray" style="padding: 6px 14px;" ${adminTablePage === 1 ? 'disabled' : ''} onclick="changeAdminTablePage(-1)">‹ Prev</button>
+                        <span style="color: var(--text-muted); font-size: 0.85rem;">Page ${adminTablePage} of ${totalPages} (${filtered.length} members)</span>
+                        <button class="btn btn-gray" style="padding: 6px 14px;" ${adminTablePage === totalPages ? 'disabled' : ''} onclick="changeAdminTablePage(1)">Next ›</button>
+                    `;
+                }
+            }
+        }
+
+        function changeAdminTablePage(delta) {
+            adminTablePage += delta;
+            renderAdminTable(document.getElementById('admin-table-search') ? document.getElementById('admin-table-search').value : '');
+        }
+
+        function filterMemberCards() {
+            memberCardsPage = 1;
+            renderMemberCards(document.getElementById('member-search').value);
+        }
+
+        function filterAdminTable() {
+            adminTablePage = 1;
+            renderAdminTable(document.getElementById('admin-table-search').value);
+        }
+
+        function filterTableStatus(status, element) {
+            currentTableFilter = status;
+            document.querySelectorAll('.filter-pills .pill').forEach(p => p.classList.remove('active'));
+            element.classList.add('active');
+            filterAdminTable();
+        }
+
+        function switchAdminTab(view, element) {
+            document.querySelectorAll('.admin-tabs .tab').forEach(t => t.classList.remove('active'));
+            element.classList.add('active');
+            
+            document.getElementById('admin-ledger-view').classList.add('hidden');
+            document.getElementById('admin-defaulters-view').classList.add('hidden');
+            document.getElementById('admin-reports-view').classList.add('hidden');
+            document.getElementById('admin-audit-view').classList.add('hidden');
+            document.getElementById('admin-settings-view').classList.add('hidden');
+
+            if(view === 'ledger') {
+                document.getElementById('admin-ledger-view').classList.remove('hidden');
+            } else if(view === 'defaulters') {
+                document.getElementById('admin-defaulters-view').classList.remove('hidden');
+                renderDefaultersView();
+            } else if(view === 'reports') {
+                document.getElementById('admin-reports-view').classList.remove('hidden');
+                renderCollectionsChart();
+                renderArrearsTrendChart();
+            } else if(view === 'audit') {
+                document.getElementById('admin-audit-view').classList.remove('hidden');
+                document.getElementById('audit-list-container').innerHTML = auditLogs.map(l => `<li class="audit-item"><span class="audit-time">${escapeHtml(l.time)}</span><span>${escapeHtml(l.action)}</span></li>`).join('');
+            } else if(view === 'settings') {
+                document.getElementById('admin-settings-view').classList.remove('hidden');
+            }
+        }
+
+        // ------------------------------------------------------------
+        // DEFAULTERS REPORT
+        // ------------------------------------------------------------
+        function renderDefaultersView() {
+            const tbody = document.getElementById('defaulters-table-body');
+            const defaulters = membersData
+                .map(m => ({ member: m, fin: getMemberFinancials(m) }))
+                .filter(x => x.fin.duesOwed > 0)
+                .sort((a, b) => b.fin.duesOwed - a.fin.duesOwed);
+
+            if (defaulters.length === 0) {
+                tbody.innerHTML = `<tr style="background-color: #121929;"><td colspan="4" style="text-align:center; color: #94a3b8; background-color: #121929; padding: 20px;">No one is currently in arrears. 🎉</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = defaulters.map(({ member, fin }) => `
+                <tr style="background-color: #121929;">
+                    <td style="color: #ffffff; background-color: #121929;">${escapeHtml(member.name)}</td>
+                    <td style="color: #ffffff; background-color: #121929;">${escapeHtml(member.phone) || '—'}${member.phone2 ? ' / ' + escapeHtml(member.phone2) : ''}</td>
+                    <td style="color: #ffffff; background-color: #121929;">${fin.owedMonths.length}</td>
+                    <td class="val-red" style="color: #ef4444; background-color: #121929;">${formatCurrency(fin.duesOwed)}</td>
+                </tr>
+            `).join('');
+        }
+
+        function downloadDefaultersPDF() {
+            const element = document.getElementById('defaulters-report-content');
+            const opt = {
+                margin: 10,
+                filename: `Anuanom_Welfare_Defaulters_${new Date().toISOString().slice(0,10)}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true, backgroundColor: '#121929' },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+            html2pdf().from(element).set(opt).save().then(() => {
+                showToast('Defaulters report downloaded');
+            }).catch(err => {
+                console.error('PDF generation failed:', err);
+                showToast('Could not generate the PDF — please try again.', true);
+            });
+        }
+
+        // ------------------------------------------------------------
+        // MONTHLY COLLECTIONS REPORT (chart)
+        // ------------------------------------------------------------
+        let collectionsChartInstance = null;
+
+        function renderCollectionsChart() {
+            const totals = welfareMonths.map(month => {
+                const year = month.split(' ')[1];
+                const rate = getRateForYear(year);
+                const paidCount = membersData.filter(m => (m.paidMonths || []).includes(month)).length;
+                return paidCount * rate;
+            });
+            const labels = welfareMonths.map(m => m.replace(' 20', " '"));
+
+            const ctx = document.getElementById('collections-chart');
+            if (collectionsChartInstance) {
+                collectionsChartInstance.destroy();
+            }
+            collectionsChartInstance = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Total Collected (GH¢)',
+                        data: totals,
+                        backgroundColor: 'rgba(249, 115, 22, 0.6)',
+                        borderColor: 'rgba(249, 115, 22, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { labels: { color: '#94a3b8' } } },
+                    scales: {
+                        x: { ticks: { color: '#94a3b8', maxRotation: 90, minRotation: 90 }, grid: { color: '#1e293b' } },
+                        y: { ticks: { color: '#94a3b8' }, grid: { color: '#1e293b' }, beginAtZero: true }
+                    }
+                }
+            });
+        }
+
+        let arrearsTrendChartInstance = null;
+
+        function renderArrearsTrendChart() {
+            const currIdx = getCurrentMonthIndex();
+            const labels = [];
+            const arrearsData = [];
+            let cumulativeExpected = 0;
+            let cumulativeActual = 0;
+
+            for (let i = 0; i <= currIdx; i++) {
+                const month = welfareMonths[i];
+                const year = month.split(' ')[1];
+                const rate = getRateForYear(year);
+                const eligibleMembers = membersData.filter(m => {
+                    const joinIdxRaw = m.joinMonth ? welfareMonths.indexOf(m.joinMonth) : 0;
+                    const joinIdx = joinIdxRaw === -1 ? 0 : joinIdxRaw;
+                    return joinIdx <= i;
+                });
+                cumulativeExpected += eligibleMembers.length * rate;
+                const paidCount = eligibleMembers.filter(m => (m.paidMonths || []).includes(month)).length;
+                cumulativeActual += paidCount * rate;
+                labels.push(month.replace(' 20', " '"));
+                arrearsData.push(Math.max(0, cumulativeExpected - cumulativeActual));
+            }
+
+            const ctx = document.getElementById('arrears-trend-chart');
+            if (arrearsTrendChartInstance) {
+                arrearsTrendChartInstance.destroy();
+            }
+            arrearsTrendChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Cumulative Arrears Owed (GH¢)',
+                        data: arrearsData,
+                        borderColor: 'rgba(239, 68, 68, 1)',
+                        backgroundColor: 'rgba(239, 68, 68, 0.15)',
+                        fill: true,
+                        tension: 0.25
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: { legend: { labels: { color: '#94a3b8' } } },
+                    scales: {
+                        x: { ticks: { color: '#94a3b8' }, grid: { color: '#1e293b' } },
+                        y: { ticks: { color: '#94a3b8' }, grid: { color: '#1e293b' }, beginAtZero: true }
+                    }
+                }
+            });
+        }
+
+        // ------------------------------------------------------------
+        // BULK IMPORT
+        // ------------------------------------------------------------
+        let parsedImportRows = [];
+
+        function downloadImportTemplate() {
+            const csv = 'Name,Phone,PIN,AlternatePhone,JoinMonth\nAkosua Mensah,0241112233,1234,,July 2026\nKwabena Owusu,0201234567,5678,0501234567,July 2026\n"Mensah, Kwame",0209998877,4321,,December 2026\n';
+            const blob = new Blob([csv], { type: 'text/csv' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'anuanom-welfare-import-template.csv';
+            link.click();
+        }
+
+        function openBulkImportModal() {
+            parsedImportRows = [];
+            document.getElementById('bulk-import-file-input').value = '';
+            document.getElementById('bulk-import-preview').innerHTML = 'Choose a CSV file to see a preview here.';
+            document.getElementById('confirm-bulk-import-btn').disabled = true;
+            document.getElementById('bulk-import-modal').classList.add('active');
+        }
+
+        function closeBulkImportModal() {
+            document.getElementById('bulk-import-modal').classList.remove('active');
+        }
+
+        function parseCSVLine(line, delimiter = ',') {
+            const result = [];
+            let current = '';
+            let inQuotes = false;
+            for (let i = 0; i < line.length; i++) {
+                const char = line[i];
+                if (inQuotes) {
+                    if (char === '"') {
+                        if (line[i + 1] === '"') { current += '"'; i++; }
+                        else { inQuotes = false; }
+                    } else {
+                        current += char;
+                    }
+                } else {
+                    if (char === '"') { inQuotes = true; }
+                    else if (char === delimiter) { result.push(current.trim()); current = ''; }
+                    else { current += char; }
+                }
+            }
+            result.push(current.trim());
+            return result;
+        }
+
+        function handleBulkImportFileSelect(input) {
+            const file = input.files && input.files[0];
+            if (!file) return;
+
+            if (/\.xlsx?$/i.test(file.name)) {
+                showToast('That\'s a native Excel file — please use "Save As" > CSV in Excel first, then upload the .csv file.', true);
+                input.value = '';
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                // Strip a UTF-8 byte-order-mark Excel often adds to CSV exports —
+                // left in place, it would corrupt the very first cell.
+                let text = e.target.result.replace(/^\uFEFF/, '');
+
+                const rawLines = text.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
+                // Excel exports CSVs with semicolons instead of commas in some
+                // regional settings — detect which one this file actually uses.
+                const delimiter = (rawLines[0] && rawLines[0].split(';').length > rawLines[0].split(',').length) ? ';' : ',';
+
+                let startIdx = 0;
+                // Skip a header row if it looks like one.
+                if (rawLines[0] && rawLines[0].toLowerCase().startsWith('name')) startIdx = 1;
+
+                const valid = [];
+                const skipped = [];
+                const suspiciousPhones = [];
+                for (let i = startIdx; i < rawLines.length; i++) {
+                    const parts = parseCSVLine(rawLines[i], delimiter);
+                    const name = parts[0];
+                    let phone = parts[1] || '0240000000';
+                    const pin = (parts[2] && /^\d{4}$/.test(parts[2])) ? parts[2] : '1234';
+                    const phone2 = parts[3] || '';
+                    // Optional 5th column — defaults to the association's founding
+                    // month, since bulk import is normally for the original batch
+                    // of members who've all been part of it from the start.
+                    const joinMonth = (parts[4] && welfareMonths.includes(parts[4].trim())) ? parts[4].trim() : welfareMonths[0];
+                    if (!name) { skipped.push(rawLines[i]); continue; }
+                    // Excel often converts long numbers like phone numbers into
+                    // scientific notation (e.g. 2.41112E+11) — that data is lost,
+                    // not something we can recover, so flag it clearly instead.
+                    if (/^\d\.\d+E\+\d+$/i.test(phone.trim()) || /^\d\.\d+E\+\d+$/i.test(phone2.trim())) {
+                        suspiciousPhones.push(name);
+                    }
+                    valid.push({ name, phone, pin, phone2, joinMonth });
+                }
+
+                parsedImportRows = valid;
+                const preview = document.getElementById('bulk-import-preview');
+                let html = `<strong style="color: var(--accent-green);">${valid.length} member(s) ready to import.</strong>`;
+                if (skipped.length > 0) html += `<br><span style="color: var(--accent-red);">${skipped.length} row(s) skipped (missing name).</span>`;
+                if (suspiciousPhones.length > 0) html += `<br><span style="color: var(--accent-red);">⚠ ${suspiciousPhones.length} phone number(s) look corrupted by Excel (scientific notation) — check ${suspiciousPhones.slice(0,3).join(', ')}${suspiciousPhones.length > 3 ? '...' : ''} before importing.</span>`;
+
+                const seenNames = new Set();
+                const seenPhones = new Set();
+                let duplicateCount = 0;
+                const rowsHTML = valid.slice(0, 8).map(r => {
+                    const normName = r.name.trim().toLowerCase();
+                    const isDup = findDuplicateMember(r.name, r.phone) || seenNames.has(normName) || seenPhones.has(r.phone);
+                    seenNames.add(normName);
+                    seenPhones.add(r.phone);
+                    if (isDup) duplicateCount++;
+                    const warn = isDup ? ' <span style="color: var(--accent-red);">⚠ possible duplicate</span>' : '';
+                    return `<li>${escapeHtml(r.name)} — ${escapeHtml(r.phone)}${r.phone2 ? ' / ' + escapeHtml(r.phone2) : ''} — PIN ${escapeHtml(r.pin)}${warn}</li>`;
+                }).join('');
+
+                if (duplicateCount > 0) html += `<br><span style="color: var(--accent-red);">${duplicateCount} possible duplicate(s) found — review before confirming.</span>`;
+                html += '<ul style="margin-top: 8px; padding-left: 18px;">' + rowsHTML;
+                if (valid.length > 8) html += `<li>...and ${valid.length - 8} more</li>`;
+                html += '</ul>';
+                preview.innerHTML = html;
+
+                document.getElementById('confirm-bulk-import-btn').disabled = valid.length === 0;
+            };
+            reader.onerror = () => showToast('Could not read that file — please try again.', true);
+            reader.readAsText(file);
+        }
+
+        function confirmBulkImport() {
+            if (parsedImportRows.length === 0) return;
+
+            const btn = document.getElementById('confirm-bulk-import-btn');
+            btn.innerText = 'Importing...';
+            btn.disabled = true;
+
+            const batch = db.batch();
+            parsedImportRows.forEach(row => {
+                const docRef = membersCol.doc();
+                batch.set(docRef, {
+                    name: row.name,
+                    phone: row.phone,
+                    phone2: row.phone2 || null,
+                    pin: row.pin,
+                    paidMonths: [],
+                    homecoming: 0.00,
+                    lastLogin: null,
+                    joinMonth: row.joinMonth
+                });
+            });
+
+            batch.commit()
+                .then(() => {
+                    logAudit(`Bulk imported ${parsedImportRows.length} member(s).`);
+                    showToast(`Imported ${parsedImportRows.length} member(s) successfully!`);
+                    closeBulkImportModal();
+                })
+                .catch(err => {
+                    console.error('Bulk import failed:', err);
+                    showToast('Import failed — check your connection and try again.', true);
+                })
+                .finally(() => {
+                    btn.innerText = 'Confirm Import';
+                    btn.disabled = false;
+                });
+        }
+
+        // ------------------------------------------------------------
+        // BULK RECORD PAYMENT — mark one month paid for many members at once
+        // ------------------------------------------------------------
+        let bulkPaymentSelectedIds = new Set();
+
+        function openBulkPaymentModal() {
+            const currIdx = getCurrentMonthIndex();
+            const monthSelect = document.getElementById('bulk-payment-month');
+            // Scoped to the current month and earlier only — bulk-marking a
+            // future month for a whole group risks skipping someone's unpaid
+            // earlier months, so that stays a one-at-a-time "Edit Months" action.
+            monthSelect.innerHTML = welfareMonths
+                .slice(0, currIdx + 1)
+                .map((m, idx) => `<option value="${idx}" ${idx === currIdx ? 'selected' : ''}>${m}</option>`)
+                .join('');
+
+            bulkPaymentSelectedIds = new Set();
+            document.getElementById('bulk-payment-search').value = '';
+            renderBulkPaymentMemberList();
+            document.getElementById('bulk-payment-modal').classList.add('active');
+        }
+
+        function closeBulkPaymentModal() {
+            document.getElementById('bulk-payment-modal').classList.remove('active');
+        }
+
+        function renderBulkPaymentMemberList() {
+            const searchTerm = document.getElementById('bulk-payment-search').value.toLowerCase();
+            const filtered = membersData.filter(m => m.name.toLowerCase().includes(searchTerm));
+            const monthIdx = parseInt(document.getElementById('bulk-payment-month').value, 10);
+            const month = welfareMonths[monthIdx];
+
+            const list = document.getElementById('bulk-payment-member-list');
+            list.innerHTML = filtered.map(m => {
+                const alreadyPaid = month && (m.paidMonths || []).includes(month);
+                const checked = bulkPaymentSelectedIds.has(m.id) ? 'checked' : '';
+                return `
+                    <label class="month-checkbox-label" style="${alreadyPaid ? 'opacity: 0.5;' : ''}">
+                        <input type="checkbox" ${checked} ${alreadyPaid ? 'disabled' : ''} onchange="toggleBulkPaymentMember('${m.id}', this.checked)">
+                        <span>${escapeHtml(m.name)}${alreadyPaid ? ' (already paid)' : ''}</span>
+                    </label>
+                `;
+            }).join('');
+            updateBulkPaymentCount();
+        }
+
+        function toggleBulkPaymentMember(id, isChecked) {
+            if (isChecked) bulkPaymentSelectedIds.add(id);
+            else bulkPaymentSelectedIds.delete(id);
+            updateBulkPaymentCount();
+        }
+
+        function selectAllBulkPaymentVisible(select) {
+            const searchTerm = document.getElementById('bulk-payment-search').value.toLowerCase();
+            const monthIdx = parseInt(document.getElementById('bulk-payment-month').value, 10);
+            const month = welfareMonths[monthIdx];
+            membersData
+                .filter(m => m.name.toLowerCase().includes(searchTerm))
+                .filter(m => !(month && (m.paidMonths || []).includes(month)))
+                .forEach(m => {
+                    if (select) bulkPaymentSelectedIds.add(m.id);
+                    else bulkPaymentSelectedIds.delete(m.id);
+                });
+            renderBulkPaymentMemberList();
+        }
+
+        function updateBulkPaymentCount() {
+            document.getElementById('bulk-payment-count').innerText = `${bulkPaymentSelectedIds.size} member(s) selected`;
+        }
+
+        function confirmBulkPayment() {
+            if (bulkPaymentSelectedIds.size === 0) {
+                showToast('Select at least one member first.', true);
+                return;
+            }
+            const monthIdx = parseInt(document.getElementById('bulk-payment-month').value, 10);
+            const month = welfareMonths[monthIdx];
+
+            if (!confirm(`Mark ${month} as paid for ${bulkPaymentSelectedIds.size} member(s)?`)) return;
+
+            const btn = document.getElementById('confirm-bulk-payment-btn');
+            btn.innerText = 'Saving...';
+            btn.disabled = true;
+
+            const batch = db.batch();
+            let count = 0;
+            bulkPaymentSelectedIds.forEach(id => {
+                const member = membersData.find(m => m.id === id);
+                if (!member) return;
+                const paidMonths = member.paidMonths || [];
+                if (paidMonths.includes(month)) return; // already paid, skip
+                batch.update(membersCol.doc(id), { paidMonths: [...paidMonths, month] });
+                count++;
+            });
+
+            batch.commit()
+                .then(() => {
+                    logAudit(`Bulk recorded ${month} payment for ${count} member(s).`);
+                    showToast(`Marked ${month} as paid for ${count} member(s)!`);
+                    closeBulkPaymentModal();
+                })
+                .catch(err => {
+                    console.error('Bulk payment failed:', err);
+                    showToast('Could not save — check your connection and try again.', true);
+                })
+                .finally(() => {
+                    btn.innerText = 'Confirm Payment';
+                    btn.disabled = false;
+                });
+        }
+
+        // ------------------------------------------------------------
+        // FULL DATA BACKUP
+        // ------------------------------------------------------------
+        function exportFullAuditLog() {
+            showToast('Fetching full audit history...');
+            auditCol.orderBy('createdAt', 'desc').limit(5000).get()
+                .then(snapshot => {
+                    const entries = snapshot.docs.map(doc => doc.data());
+                    let csv = [csvEscape('Time'), csvEscape('Action')].join(',') + '\n';
+                    entries.forEach(e => {
+                        csv += [csvEscape(e.time || ''), csvEscape(e.action || '')].join(',') + '\n';
+                    });
+                    const blob = new Blob([csv], { type: 'text/csv' });
+                    const link = document.createElement('a');
+                    link.href = URL.createObjectURL(blob);
+                    link.download = `anuanom-welfare-full-audit-log-${new Date().toISOString().slice(0,10)}.csv`;
+                    link.click();
+                    showToast(`Exported ${entries.length} audit entries.`);
+                })
+                .catch(err => {
+                    console.error('Full audit export failed:', err);
+                    showToast('Could not export the audit log — check your connection and try again.', true);
+                });
+        }
+
+        function downloadFullBackup() {
+            const backup = {
+                exportedAt: new Date().toISOString(),
+                association: "Anuanom 2016 Welfare Association",
+                members: membersData,
+                auditLogs: auditLogs,
+                settings: {
+                    ratesByYear,
+                    activeYear,
+                    calendarStartYear: CALENDAR_START_YEAR,
+                    calendarEndYear,
+                    specialFundLabel,
+                    specialFundExpiryDays,
+                    specialFundStartedAt,
+                    logoData
+                }
+            };
+            const blob = new Blob([JSON.stringify(backup, null, 2)], { type: 'application/json' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `anuanom-welfare-backup-${new Date().toISOString().slice(0,10)}.json`;
+            link.click();
+            logAudit('Full data backup downloaded.');
+            showToast('Backup downloaded successfully!');
+        }
+
+        function renderActiveYearOptions() {
+            const select = document.getElementById('settings-active-year');
+            if (!select) return;
+            let html = '';
+            for (let year = CALENDAR_START_YEAR; year <= calendarEndYear; year++) {
+                html += `<option value="${year}" ${String(year) === activeYear ? 'selected' : ''}>${year}</option>`;
+            }
+            select.innerHTML = html;
+        }
+
+        function renderRateInputs() {
+            const container = document.getElementById('settings-rates-container');
+            if (!container) return;
+            let html = '';
+            for (let year = CALENDAR_START_YEAR; year <= calendarEndYear; year++) {
+                const rate = ratesByYear[String(year)] !== undefined ? ratesByYear[String(year)] : 20.00;
+                html += `
+                    <div class="rate-input-item">
+                        <label>${year} Rate (GH¢)</label>
+                        <input type="number" id="settings-rate-${year}" value="${rate}" min="0" step="any">
+                    </div>
+                `;
+            }
+            container.innerHTML = html;
+            const displayEl = document.getElementById('settings-calendar-end-year-display');
+            if (displayEl) displayEl.innerText = calendarEndYear;
+        }
+
+        function onActiveYearChange() {
+            activeYear = document.getElementById('settings-active-year').value;
+            renderStats();
+        }
+
+        function saveAssociationSettings() {
+            const newActiveYear = document.getElementById('settings-active-year').value;
+            const newRates = { ...ratesByYear };
+            let hasError = false;
+            const summary = [];
+
+            for (let year = CALENDAR_START_YEAR; year <= calendarEndYear; year++) {
+                const input = document.getElementById(`settings-rate-${year}`);
+                const rate = parseFloat(input.value);
+                if (isNaN(rate) || rate < 0) { hasError = true; break; }
+                newRates[String(year)] = rate;
+                summary.push(`${year}=${formatCurrency(rate)}`);
+            }
+
+            if (hasError) {
+                showToast('Please enter valid positive numbers for all rates.', true);
+                return;
+            }
+
+            const saveBtn = document.getElementById('save-rates-btn');
+            saveBtn.innerText = 'Saving...';
+            saveBtn.disabled = true;
+
+            settingsDoc.set({ ratesByYear: newRates, activeYear: newActiveYear }, { merge: true })
+                .then(() => {
+                    logAudit(`Rates updated: ${summary.join(', ')}. Active Year set to ${newActiveYear}.`);
+                    showToast('Settings successfully updated!');
+                })
+                .catch(err => {
+                    console.error('Settings save failed:', err);
+                    showToast('Could not save settings — check your connection and try again.', true);
+                })
+                .finally(() => {
+                    saveBtn.innerText = 'Save Rates & Active Year';
+                    saveBtn.disabled = false;
+                });
+        }
+
+        function extendCalendar() {
+            const input = document.getElementById('settings-extend-year');
+            const newEndYear = parseInt(input.value, 10);
+
+            if (isNaN(newEndYear) || newEndYear <= calendarEndYear) {
+                showToast(`Please enter a year after ${calendarEndYear}.`, true);
+                return;
+            }
+            if (newEndYear > calendarEndYear + 10) {
+                showToast('That\'s a big jump — please extend a few years at a time.', true);
+                return;
+            }
+            const addedMonths = (newEndYear - calendarEndYear) * 12;
+            if (!confirm(`Extend the welfare calendar through December ${newEndYear}? This adds ${addedMonths} new months, starting at the same rate as ${calendarEndYear}.`)) {
+                return;
+            }
+
+            const lastKnownRate = getRateForYear(String(calendarEndYear));
+            const newRates = { ...ratesByYear };
+            for (let year = calendarEndYear + 1; year <= newEndYear; year++) {
+                newRates[String(year)] = lastKnownRate;
+            }
+
+            settingsDoc.set({ calendarEndYear: newEndYear, ratesByYear: newRates }, { merge: true })
+                .then(() => {
+                    logAudit(`Calendar extended through December ${newEndYear}.`);
+                    showToast(`Calendar extended through ${newEndYear}!`);
+                    input.value = '';
+                })
+                .catch(err => {
+                    console.error('Extend calendar failed:', err);
+                    showToast('Could not extend the calendar — check your connection and try again.', true);
+                });
+        }
+
+        function renderAdminAccessList() {
+            const emailDisplay = document.getElementById('main-admin-email-display');
+            if (emailDisplay) emailDisplay.innerText = MAIN_ADMIN_EMAIL;
+
+            const list = document.getElementById('secondary-admin-list');
+            if (!list) return;
+            if (secondaryAdminEmails.length === 0) {
+                list.innerHTML = '<p style="font-size: 0.8rem; color: var(--text-muted);">No secondary admins added yet.</p>';
+                return;
+            }
+            list.innerHTML = secondaryAdminEmails.map(email => `
+                <div style="display: flex; justify-content: space-between; align-items: center; background: var(--bg-card); padding: 8px 12px; border-radius: 6px; margin-bottom: 6px;">
+                    <span style="font-size: 0.85rem;">${escapeHtml(email)}</span>
+                    <button class="action-link danger main-admin-only" onclick="removeSecondaryAdmin('${escapeHtml(email)}')">Remove</button>
+                </div>
+            `).join('');
+            applyAdminRoleRestrictions();
+        }
+
+        function addSecondaryAdmin() {
+            const input = document.getElementById('new-secondary-admin-email');
+            const email = input.value.trim().toLowerCase();
+
+            if (!email || !email.includes('@')) {
+                showToast('Please enter a valid email address.', true);
+                return;
+            }
+            if (email === MAIN_ADMIN_EMAIL.toLowerCase()) {
+                showToast('That\'s already the main admin account.', true);
+                return;
+            }
+            if (secondaryAdminEmails.map(e => e.toLowerCase()).includes(email)) {
+                showToast('That email is already an admin.', true);
+                return;
+            }
+
+            const updated = [...secondaryAdminEmails, email];
+            settingsDoc.set({ secondaryAdminEmails: updated }, { merge: true })
+                .then(() => {
+                    logAudit(`Added ${email} as a secondary (view-only) admin.`);
+                    showToast(`${email} added as a secondary admin.`);
+                    input.value = '';
+                })
+                .catch(err => {
+                    console.error('Adding secondary admin failed:', err);
+                    showToast('Could not save — check your connection and try again.', true);
+                });
+        }
+
+        function removeSecondaryAdmin(email) {
+            if (!confirm(`Remove ${email} as an admin?`)) return;
+
+            const updated = secondaryAdminEmails.filter(e => e !== email);
+            settingsDoc.set({ secondaryAdminEmails: updated }, { merge: true })
+                .then(() => {
+                    logAudit(`Removed ${email} as a secondary admin.`);
+                    showToast(`${email} removed.`);
+                })
+                .catch(err => {
+                    console.error('Removing secondary admin failed:', err);
+                    showToast('Could not save — check your connection and try again.', true);
+                });
+        }
+
+        function saveSpecialFundSettings() {
+            const newLabel = document.getElementById('settings-fund-label').value.trim();
+            const newExpiryDays = parseInt(document.getElementById('settings-fund-expiry-days').value, 10);
+
+            if (!newLabel) {
+                showToast('Please enter a fund name.', true);
+                return;
+            }
+            if (isNaN(newExpiryDays) || newExpiryDays < 1) {
+                showToast('Please enter a valid number of days (1 or more).', true);
+                return;
+            }
+            if (newExpiryDays > 365) {
+                showToast('That\'s over a year — double check for a typo. (Max allowed: 365 days.)', true);
+                return;
+            }
+            if (!confirm(`Start a new "${newLabel}" round now, running for ${newExpiryDays} days? This restarts the countdown for everyone.`)) {
+                return;
+            }
+
+            const saveBtn = document.getElementById('save-fund-settings-btn');
+            saveBtn.innerText = 'Starting...';
+            saveBtn.disabled = true;
+
+            settingsDoc.set({
+                specialFundLabel: newLabel,
+                specialFundExpiryDays: newExpiryDays,
+                specialFundStartedAt: new Date().toISOString()
+            }, { merge: true })
+                .then(() => {
+                    logAudit(`Started a new "${newLabel}" round, running for ${newExpiryDays} days.`);
+                    showToast(`${newLabel} round started!`);
+                })
+                .catch(err => {
+                    console.error('Fund settings save failed:', err);
+                    showToast('Could not save — check your connection and try again.', true);
+                })
+                .finally(() => {
+                    saveBtn.innerText = 'Start / Restart Fund Round';
+                    saveBtn.disabled = false;
+                });
+        }
+
+        function handleLogoFileSelect(input) {
+            const file = input.files && input.files[0];
+            if (!file) return;
+
+            if (!file.type.startsWith('image/')) {
+                showToast('Please choose an image file.', true);
+                input.value = '';
+                return;
+            }
+            if (file.size > 400 * 1024) {
+                showToast('Image is too large — please use one under 400KB.', true);
+                input.value = '';
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                pendingLogoData = e.target.result;
+                document.getElementById('logo-preview').innerHTML = `<img src="${pendingLogoData}" alt="Logo preview">`;
+            };
+            reader.onerror = () => {
+                showToast('Could not read that image — please try a different file.', true);
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function saveLogo() {
+            if (!pendingLogoData) {
+                showToast('Choose an image first.', true);
+                return;
+            }
+            const saveBtn = document.getElementById('save-logo-btn');
+            saveBtn.innerText = 'Saving...';
+            saveBtn.disabled = true;
+
+            settingsDoc.set({ logoData: pendingLogoData }, { merge: true })
+                .then(() => {
+                    logAudit('Association logo updated.');
+                    showToast('Logo updated for everyone!');
+                    pendingLogoData = null;
+                })
+                .catch(err => {
+                    console.error('Logo save failed:', err);
+                    showToast('Could not save the logo — check your connection and try again.', true);
+                })
+                .finally(() => {
+                    saveBtn.innerText = 'Save Logo';
+                    saveBtn.disabled = false;
+                });
+        }
+
+        function removeLogo() {
+            if (!confirm('Remove the current logo and go back to the default "AN" mark?')) return;
+
+            settingsDoc.set({ logoData: null }, { merge: true })
+                .then(() => {
+                    logAudit('Association logo removed.');
+                    pendingLogoData = null;
+                    document.getElementById('logo-file-input').value = '';
+                    showToast('Logo removed.');
+                })
+                .catch(err => {
+                    console.error('Logo removal failed:', err);
+                    showToast('Could not remove the logo — check your connection and try again.', true);
+                });
+        }
+
+        function csvEscape(value) {
+            const str = String(value === null || value === undefined ? '' : value);
+            return `"${str.replace(/"/g, '""')}"`;
+        }
+
+        function exportToCSV() {
+            let csv = [csvEscape('Name'), csvEscape('Phone'), csvEscape('Alternate Phone'), csvEscape('Paid & Advanced Months'), csvEscape('Owed Months'), csvEscape('Last Login'), csvEscape(specialFundLabel)].join(',') + '\n';
+            membersData.forEach(m => {
+                const fin = getMemberFinancials(m);
+                csv += [
+                    csvEscape(m.name),
+                    csvEscape(m.phone),
+                    csvEscape(m.phone2 || ''),
+                    csvEscape((m.paidMonths || []).join('; ')),
+                    csvEscape(fin.owedMonths.join('; ')),
+                    csvEscape(m.lastLogin || 'Never'),
+                    csvEscape(m.homecoming || 0)
+                ].join(',') + '\n';
+            });
+            const link = document.createElement("a");
+            link.href = "data:text/csv;charset=utf-8," + encodeURIComponent(csv);
+            link.download = "Anuanom_Welfare_Monthly_Ledger.csv";
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            showToast('Monthly Ledger Exported to CSV');
+        }
+
+        // No window.onload render calls needed — the membersCol/settingsDoc/auditCol
+        // onSnapshot listeners above fire immediately on page load with the current
+        // data and handle the first render themselves (see markReady()).
+
+        // Register the service worker so browsers offer "Add to Home Screen".
+        // Only works when hosted over HTTPS (or localhost) — browsers block
+        // service workers entirely on file:// pages, so this silently does
+        // nothing while testing a downloaded copy locally, and only takes
+        // effect once the portal is actually deployed to real hosting.
+        if ('serviceWorker' in navigator && location.protocol !== 'file:') {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('service-worker.js')
+                    .catch(err => console.error('Service worker registration failed:', err));
+            });
+        }
+    </script>
+</body>
+</html>
