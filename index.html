@@ -1234,30 +1234,33 @@
             if (el('settings-fund-status')) {
                 el('settings-fund-status').innerHTML = getFundCampaignBadgeHTML() || '<span style="color: var(--text-muted); font-size: 0.8rem;">No round currently running.</span>';
             }
+            if (loggedInMember && el('my-homecoming-countdown')) {
+                el('my-homecoming-countdown').innerHTML = getFundCampaignBadgeHTML();
+            }
         }
 
         // Campaign-wide countdown — the SAME for every member, whether they've
         // contributed yet or not, so people who haven't paid in still see that
         // a temporary fund is running and are prompted to join in.
-        function getFundCampaignDaysLeft() {
+        function getFundCampaignMillisLeft() {
             if (!specialFundStartedAt) return null;
-            const daysElapsed = (Date.now() - new Date(specialFundStartedAt).getTime()) / (1000 * 60 * 60 * 24);
-            return Math.ceil(specialFundExpiryDays - daysElapsed);
+            const endTime = new Date(specialFundStartedAt).getTime() + (specialFundExpiryDays * 24 * 60 * 60 * 1000);
+            return endTime - Date.now();
         }
 
-        // Green at the start, sliding through orange, ending red as the
-        // deadline approaches — three color stops, interpolated smoothly.
-        function getTimerGradientColor(percentElapsed) {
-            const green = [16, 185, 129];
-            const orange = [249, 115, 22];
-            const red = [239, 68, 68];
-            let c1, c2, t;
-            if (percentElapsed <= 0.5) {
-                c1 = green; c2 = orange; t = percentElapsed / 0.5;
-            } else {
-                c1 = orange; c2 = red; t = (percentElapsed - 0.5) / 0.5;
-            }
-            return [0, 1, 2].map(i => Math.round(c1[i] + (c2[i] - c1[i]) * t));
+        function getFundCampaignDaysLeft() {
+            const ms = getFundCampaignMillisLeft();
+            if (ms === null) return null;
+            return Math.ceil(ms / (1000 * 60 * 60 * 24));
+        }
+
+        // Fixed, meaningful checkpoints rather than a smooth proportional
+        // gradient — calm green with plenty of time left, orange once inside
+        // a month, red once inside the final two weeks.
+        function getTimerColorForDaysLeft(daysLeft) {
+            if (daysLeft > 30) return [16, 185, 129];   // green
+            if (daysLeft > 15) return [249, 115, 22];   // orange
+            return [239, 68, 68];                        // red
         }
 
         function getFundThankYouHTML(member) {
@@ -1266,17 +1269,24 @@
         }
 
         function getFundCampaignBadgeHTML() {
-            if (!specialFundStartedAt) return '';
-            const daysElapsedRaw = (Date.now() - new Date(specialFundStartedAt).getTime()) / (1000 * 60 * 60 * 24);
-            const percentElapsed = Math.min(1, Math.max(0, daysElapsedRaw / specialFundExpiryDays));
-            const daysLeft = Math.ceil(specialFundExpiryDays - daysElapsedRaw);
-            const text = daysLeft <= 0 ? 'Closing soon' : `${daysLeft} day${daysLeft === 1 ? '' : 's'} left`;
+            const ms = getFundCampaignMillisLeft();
+            if (ms === null) return '';
 
-            const [r, g, b] = getTimerGradientColor(percentElapsed);
+            const totalMs = specialFundExpiryDays * 24 * 60 * 60 * 1000;
+            const percentRemaining = Math.min(100, Math.max(0, (ms / totalMs) * 100));
+
+            const clampedMs = Math.max(0, ms);
+            const days = Math.floor(clampedMs / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((clampedMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((clampedMs % (1000 * 60 * 60)) / (1000 * 60));
+
+            const daysLeftForColor = Math.ceil(ms / (1000 * 60 * 60 * 24));
+            const text = ms <= 0 ? 'Closing soon' : `${days}d ${hours}h ${minutes}m left`;
+
+            const [r, g, b] = getTimerColorForDaysLeft(daysLeftForColor);
             const solid = `rgb(${r}, ${g}, ${b})`;
             const soft = `rgba(${r}, ${g}, ${b}, 0.15)`;
             const border = `rgba(${r}, ${g}, ${b}, 0.5)`;
-            const percentRemaining = (1 - percentElapsed) * 100;
 
             return `<div class="homecoming-timer-badge" style="background: ${soft}; border: 1px solid ${border}; color: ${solid};">
                 <span>⏳ ${text}</span>
@@ -3008,6 +3018,16 @@
         // No window.onload render calls needed — the membersCol/settingsDoc/auditCol
         // onSnapshot listeners above fire immediately on page load with the current
         // data and handle the first render themselves (see markReady()).
+
+        // Keeps the fund countdown genuinely live — updates the day/hour/minute
+        // display and its color everywhere it's shown, once a minute, without
+        // needing a page reload. Cheap: it only touches the DOM if a fund
+        // round is actually running.
+        setInterval(() => {
+            if (specialFundStartedAt) {
+                renderSpecialFundLabels();
+            }
+        }, 60 * 1000);
 
         // Register the service worker so browsers offer "Add to Home Screen".
         // Only works when hosted over HTTPS (or localhost) — browsers block
