@@ -537,6 +537,28 @@
         </div>
     </div>
 
+    <!-- Edit Member Details Modal -->
+    <div id="edit-member-details-modal" class="modal-overlay">
+        <div class="modal" style="text-align: left;">
+            <h3 style="text-align: center; margin-bottom: 5px;">Edit Member Details</h3>
+            <p style="text-align: center; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 20px;">Updates their name and phone number(s) — payment history, PIN, and join date all stay exactly as they are.</p>
+
+            <label class="form-label small">Full Name</label>
+            <input type="text" id="edit-member-name" placeholder="e.g. Akosua Mensah">
+
+            <label class="form-label small">Phone Number</label>
+            <input type="text" id="edit-member-phone" placeholder="e.g. 0241112233">
+
+            <label class="form-label small">Alternate Phone (optional)</label>
+            <input type="text" id="edit-member-phone2" placeholder="e.g. second SIM or a family number">
+
+            <div class="modal-actions">
+                <button class="btn btn-gray" style="flex: 1;" onclick="closeEditMemberDetailsModal()">Cancel</button>
+                <button class="btn btn-green" style="flex: 1;" onclick="saveEditMemberDetails()">Save Changes</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Bulk Import Modal -->
     <div id="bulk-import-modal" class="modal-overlay">
         <div class="modal" style="text-align: left; max-width: 480px;">
@@ -2071,6 +2093,70 @@
                 });
         }
 
+        let activeEditMemberId = null;
+
+        function openEditMemberDetailsModal(memberId) {
+            const member = membersData.find(m => m.id === memberId);
+            if (!member) return;
+            activeEditMemberId = memberId;
+
+            document.getElementById('edit-member-name').value = member.name || '';
+            document.getElementById('edit-member-phone').value = member.phone || '';
+            document.getElementById('edit-member-phone2').value = member.phone2 || '';
+            document.getElementById('edit-member-details-modal').classList.add('active');
+        }
+
+        function closeEditMemberDetailsModal() {
+            document.getElementById('edit-member-details-modal').classList.remove('active');
+            activeEditMemberId = null;
+        }
+
+        function saveEditMemberDetails() {
+            if (!activeEditMemberId) return;
+            const member = membersData.find(m => m.id === activeEditMemberId);
+            if (!member) return;
+
+            const newName = document.getElementById('edit-member-name').value.trim();
+            const newPhone = document.getElementById('edit-member-phone').value.trim();
+            const newPhone2 = document.getElementById('edit-member-phone2').value.trim();
+
+            if (!newName) {
+                showToast('Name cannot be empty.', true);
+                return;
+            }
+
+            const duplicate = findDuplicateMember(newName, newPhone, activeEditMemberId);
+            if (duplicate) {
+                const reason = duplicate.name.trim().toLowerCase() === newName.toLowerCase() ? 'the same name' : 'the same phone number';
+                if (!confirm(`${duplicate.name} already has ${reason}. Save this change anyway?`)) {
+                    return;
+                }
+            }
+
+            const saveBtn = document.querySelector('#edit-member-details-modal .btn-green');
+            saveBtn.innerText = 'Saving...';
+            saveBtn.disabled = true;
+
+            membersCol.doc(activeEditMemberId).update({
+                name: newName,
+                phone: newPhone || '0240000000',
+                phone2: newPhone2 || null
+            })
+                .then(() => {
+                    logAudit(`Admin updated details for ${member.name}${newName !== member.name ? ` (renamed to ${newName})` : ''}.`);
+                    showToast('Member details updated!');
+                    closeEditMemberDetailsModal();
+                })
+                .catch(err => {
+                    console.error('Updating member details failed:', err);
+                    showToast('Could not save — check your connection and try again.', true);
+                })
+                .finally(() => {
+                    saveBtn.innerText = 'Save Changes';
+                    saveBtn.disabled = false;
+                });
+        }
+
         function openPaymentModal(memberId) {
             activePaymentMemberId = memberId;
             const member = membersData.find(m => m.id === memberId);
@@ -2205,6 +2291,7 @@
                     <td class="val-purple">${formatCurrency(member.homecoming)}</td>
                     <td>
                         <div class="action-btns">
+                            <button class="action-link main-admin-only" onclick="openEditMemberDetailsModal('${member.id}')">Edit Details</button>
                             <button class="action-link main-admin-only" onclick="openPaymentModal('${member.id}')">Edit Months</button>
                             <button class="action-link main-admin-only" onclick="adminResetMemberPin('${member.id}')">Reset PIN</button>
                             <button class="action-link danger main-admin-only" onclick="deleteMember('${member.id}')">Remove</button>
