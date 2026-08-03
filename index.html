@@ -1286,6 +1286,16 @@
                 .replace(/'/g, '&#39;');
         }
 
+        // Distinguishes an actual Firestore security-rules rejection from a
+        // real network/connection problem, so the error shown actually
+        // points at what to check instead of always blaming "connection."
+        function getSaveErrorMessage(err) {
+            if (err && err.code === 'permission-denied') {
+                return 'Could not save — this isn\'t allowed by the current security rules yet. Ask your admin to check the Firestore rules are up to date.';
+            }
+            return 'Could not save — check your connection and try again.';
+        }
+
         function getCurrentMonthIndex() {
             const now = new Date();
             const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
@@ -1762,7 +1772,7 @@
                 })
                 .catch(err => {
                     console.error('PIN reset failed:', err);
-                    showToast('Could not reset PIN — check your connection and try again.', true);
+                    showToast(getSaveErrorMessage(err), true);
                 });
         }
 
@@ -1798,7 +1808,7 @@
                 })
                 .catch(err => {
                     console.error('PIN update failed:', err);
-                    showToast('Could not update PIN — check your connection and try again.', true);
+                    showToast(getSaveErrorMessage(err), true);
                 });
         }
 
@@ -1865,7 +1875,7 @@
                 })
                 .catch(err => {
                     console.error('Saving security question failed:', err);
-                    showToast('Could not save — check your connection and try again.', true);
+                    showToast(getSaveErrorMessage(err), true);
                 });
         }
 
@@ -1907,7 +1917,7 @@
                 })
                 .catch(err => {
                     console.error('Updating phone failed:', err);
-                    showToast('Could not save — check your connection and try again.', true);
+                    showToast(getSaveErrorMessage(err), true);
                 })
                 .finally(() => {
                     saveBtn.innerText = 'Save';
@@ -2120,7 +2130,7 @@
                 })
                 .catch(err => {
                     console.error('Add member failed:', err);
-                    showToast('Could not add member — check your connection and try again.', true);
+                    showToast(getSaveErrorMessage(err), true);
                 })
                 .finally(() => {
                     saveBtn.innerText = 'Add Member';
@@ -2140,7 +2150,7 @@
                     })
                     .catch(err => {
                         console.error('Delete member failed:', err);
-                        showToast('Could not remove member — check your connection and try again.', true);
+                        showToast(getSaveErrorMessage(err), true);
                     });
             }
         }
@@ -2163,7 +2173,7 @@
                 })
                 .catch(err => {
                     console.error('Admin PIN reset failed:', err);
-                    showToast('Could not reset PIN — check your connection and try again.', true);
+                    showToast(getSaveErrorMessage(err), true);
                 });
         }
 
@@ -2223,7 +2233,7 @@
                 })
                 .catch(err => {
                     console.error('Updating member details failed:', err);
-                    showToast('Could not save — check your connection and try again.', true);
+                    showToast(getSaveErrorMessage(err), true);
                 })
                 .finally(() => {
                     saveBtn.innerText = 'Save Changes';
@@ -2303,7 +2313,7 @@
                 })
                 .catch(err => {
                     console.error('Record payment failed:', err);
-                    showToast('Could not save payment — check your connection and try again.', true);
+                    showToast(getSaveErrorMessage(err), true);
                 })
                 .finally(() => {
                     saveBtn.innerText = 'Save Payment';
@@ -2712,7 +2722,7 @@
                 })
                 .catch(err => {
                     console.error('Saving homepage visual mode failed:', err);
-                    showToast('Could not save — check your connection and try again.', true);
+                    showToast(getSaveErrorMessage(err), true);
                 })
                 .finally(() => {
                     saveBtn.innerText = 'Save';
@@ -2989,7 +2999,7 @@
                 })
                 .catch(err => {
                     console.error('Bulk payment failed:', err);
-                    showToast('Could not save — check your connection and try again.', true);
+                    showToast(getSaveErrorMessage(err), true);
                 })
                 .finally(() => {
                     btn.innerText = 'Confirm Payment';
@@ -3111,7 +3121,7 @@
                 })
                 .catch(err => {
                     console.error('Settings save failed:', err);
-                    showToast('Could not save settings — check your connection and try again.', true);
+                    showToast(getSaveErrorMessage(err), true);
                 })
                 .finally(() => {
                     saveBtn.innerText = 'Save Rates & Active Year';
@@ -3150,7 +3160,7 @@
                 })
                 .catch(err => {
                     console.error('Extend calendar failed:', err);
-                    showToast('Could not extend the calendar — check your connection and try again.', true);
+                    showToast(getSaveErrorMessage(err), true);
                 });
         }
 
@@ -3199,7 +3209,7 @@
                 })
                 .catch(err => {
                     console.error('Adding secondary admin failed:', err);
-                    showToast('Could not save — check your connection and try again.', true);
+                    showToast(getSaveErrorMessage(err), true);
                 });
         }
 
@@ -3214,7 +3224,7 @@
                 })
                 .catch(err => {
                     console.error('Removing secondary admin failed:', err);
-                    showToast('Could not save — check your connection and try again.', true);
+                    showToast(getSaveErrorMessage(err), true);
                 });
         }
 
@@ -3253,7 +3263,7 @@
                 })
                 .catch(err => {
                     console.error('Fund settings save failed:', err);
-                    showToast('Could not save — check your connection and try again.', true);
+                    showToast(getSaveErrorMessage(err), true);
                 })
                 .finally(() => {
                     saveBtn.innerText = 'Start / Restart Fund Round';
@@ -3304,7 +3314,7 @@
                 })
                 .catch(err => {
                     console.error('Logo save failed:', err);
-                    showToast('Could not save the logo — check your connection and try again.', true);
+                    showToast(getSaveErrorMessage(err), true);
                 })
                 .finally(() => {
                     saveBtn.innerText = 'Save Logo';
@@ -3324,7 +3334,7 @@
                 })
                 .catch(err => {
                     console.error('Logo removal failed:', err);
-                    showToast('Could not remove the logo — check your connection and try again.', true);
+                    showToast(getSaveErrorMessage(err), true);
                 });
         }
 
