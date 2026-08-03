@@ -506,6 +506,25 @@
         </div>
     </div>
 
+    <!-- Update Phone Modal -->
+    <div id="update-phone-modal" class="modal-overlay">
+        <div class="modal" style="text-align: left;">
+            <h3 style="text-align: center; margin-bottom: 5px;">Update Phone Number</h3>
+            <p style="text-align: center; font-size: 0.85rem; color: var(--text-muted); margin-bottom: 20px;">Keep this current — it's used for identity verification if you ever forget your PIN.</p>
+
+            <label class="form-label small">Phone Number</label>
+            <input type="text" id="my-update-phone" placeholder="e.g. 0241112233">
+
+            <label class="form-label small">Alternate Phone (optional)</label>
+            <input type="text" id="my-update-phone2" placeholder="e.g. second SIM or a family number">
+
+            <div class="modal-actions">
+                <button class="btn btn-gray" style="flex: 1;" onclick="closeUpdatePhoneModal()">Cancel</button>
+                <button class="btn btn-blue" style="flex: 1;" onclick="saveUpdatePhone()">Save</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Add Member Modal -->
     <div id="add-member-modal" class="modal-overlay">
         <div class="modal" style="text-align: left;">
@@ -674,6 +693,7 @@
                 <div style="display: flex; gap: 10px;">
                     <button class="btn btn-blue" onclick="openChangePinModal()">Change PIN</button>
                     <button class="btn btn-blue" onclick="openSecurityQuestionModal()">Recovery Question</button>
+                    <button class="btn btn-blue" onclick="openUpdatePhoneModal()">Update Phone</button>
                     <button class="btn btn-purple" onclick="downloadMemberPDF()">Download PDF Statement</button>
                     <button class="btn btn-gray" onclick="memberLogout()">Logout Portal</button>
                 </div>
@@ -852,8 +872,13 @@
 
             <div id="admin-settings-view" class="hidden">
                 <div class="table-header-controls">
-                    <h3>ASSOCIATION SETTINGS — LOGO & RATES</h3>
+                    <h3>ASSOCIATION SETTINGS</h3>
                 </div>
+                <div class="admin-tabs" style="max-width: 450px; margin-bottom: 20px;">
+                    <div class="tab active" id="settings-subtab-general" onclick="switchSettingsSubTab('general', this)">General</div>
+                    <div class="tab" id="settings-subtab-access" onclick="switchSettingsSubTab('access', this)">Access & Data</div>
+                </div>
+                <div id="settings-general-subview">
                 <div style="max-width: 450px; background: var(--bg-body); padding: 25px; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 20px;">
                     <label style="font-size: 0.85rem; color: var(--accent-blue); display: block; margin-bottom: 12px; font-weight: bold;">Association Logo</label>
                     <div style="display: flex; align-items: center; gap: 18px; margin-bottom: 15px;">
@@ -904,8 +929,10 @@
                     <button class="btn btn-green main-admin-only" id="save-fund-settings-btn" style="width: 100%; justify-content: center; margin-bottom: 10px;" onclick="saveSpecialFundSettings()">Start / Restart Fund Round</button>
                     <button class="btn btn-gray main-admin-only" style="width: 100%; justify-content: center;" onclick="endFundRound(false)">End Round Now</button>
                 </div>
+                </div>
 
-                <div style="max-width: 450px; background: var(--bg-body); padding: 25px; border-radius: 8px; border: 1px solid var(--border-color); margin-top: 20px;">
+                <div id="settings-access-subview" class="hidden">
+                <div style="max-width: 450px; background: var(--bg-body); padding: 25px; border-radius: 8px; border: 1px solid var(--border-color);">
                     <label class="form-label">Admin Access</label>
                     <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 15px;">You (<strong id="main-admin-email-display"></strong>) have full control. Everyone added below can log in, view everything, and export reports — but can't add/remove members, edit payments, or change settings.</p>
 
@@ -946,6 +973,7 @@
                     <label class="form-label">Data Backup</label>
                     <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 15px;">Download every member, payment record, and the full audit trail as one file — keep it somewhere safe as an insurance copy.</p>
                     <button class="btn btn-blue" style="width: 100%; justify-content: center;" onclick="downloadFullBackup()">⬇ Download Full Backup</button>
+                </div>
                 </div>
             </div>
         </div>
@@ -1841,6 +1869,52 @@
                 });
         }
 
+        function openUpdatePhoneModal() {
+            if (!loggedInMember) return;
+            document.getElementById('my-update-phone').value = loggedInMember.phone || '';
+            document.getElementById('my-update-phone2').value = loggedInMember.phone2 || '';
+            document.getElementById('update-phone-modal').classList.add('active');
+        }
+
+        function closeUpdatePhoneModal() {
+            document.getElementById('update-phone-modal').classList.remove('active');
+        }
+
+        function saveUpdatePhone() {
+            if (!loggedInMember) return;
+            const newPhone = document.getElementById('my-update-phone').value.trim();
+            const newPhone2 = document.getElementById('my-update-phone2').value.trim();
+
+            if (!newPhone) {
+                showToast('Please enter a phone number.', true);
+                return;
+            }
+
+            const saveBtn = document.querySelector('#update-phone-modal .btn-blue');
+            saveBtn.innerText = 'Saving...';
+            saveBtn.disabled = true;
+
+            membersCol.doc(loggedInMember.id).update({
+                phone: newPhone,
+                phone2: newPhone2 || null
+            })
+                .then(() => {
+                    loggedInMember.phone = newPhone;
+                    loggedInMember.phone2 = newPhone2 || null;
+                    logAudit(`${loggedInMember.name} updated their own phone number(s).`);
+                    closeUpdatePhoneModal();
+                    showToast('Phone number updated!');
+                })
+                .catch(err => {
+                    console.error('Updating phone failed:', err);
+                    showToast('Could not save — check your connection and try again.', true);
+                })
+                .finally(() => {
+                    saveBtn.innerText = 'Save';
+                    saveBtn.disabled = false;
+                });
+        }
+
         function verifyPin() {
             const enteredPin = document.getElementById('pin-input').value;
             const member = membersData.find(m => m.id === selectedMemberId);
@@ -2335,6 +2409,13 @@
             document.querySelectorAll('.filter-pills .pill').forEach(p => p.classList.remove('active'));
             element.classList.add('active');
             filterAdminTable();
+        }
+
+        function switchSettingsSubTab(subtab, element) {
+            document.querySelectorAll('#settings-subtab-general, #settings-subtab-access').forEach(t => t.classList.remove('active'));
+            element.classList.add('active');
+            document.getElementById('settings-general-subview').classList.toggle('hidden', subtab !== 'general');
+            document.getElementById('settings-access-subview').classList.toggle('hidden', subtab !== 'access');
         }
 
         function switchAdminTab(view, element) {
