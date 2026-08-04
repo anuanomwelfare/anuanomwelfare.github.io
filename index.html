@@ -644,6 +644,7 @@
             </div>
 
             <label id="payment-homecoming-label" style="font-size: 0.8rem; color: var(--accent-purple); display: block; margin-bottom: 5px; font-weight: bold;">Homecoming Fund Contribution (GH¢)</label>
+            <div id="payment-homecoming-suggested" style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 5px;"></div>
             <input type="number" id="payment-homecoming-amount" placeholder="0.00" min="0" step="any">
 
             <div class="modal-actions" style="margin-top: 15px;">
@@ -685,6 +686,9 @@
 
         <!-- PERSONAL MEMBER DASHBOARD (Hidden until logged in) -->
         <div id="member-dashboard" class="hero hidden" style="text-align: left; padding: 30px;">
+            <div id="my-amount-due-banner" style="padding: 18px 24px; border-radius: 12px; margin-bottom: 20px; text-align: center;">
+                <div id="my-amount-due-text" style="font-size: 1.3rem; font-weight: 700;"></div>
+            </div>
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; flex-wrap: wrap; gap: 15px;">
                 <div>
                     <h2 id="logged-in-name" style="font-size: 1.5rem; color: var(--accent-orange);"></h2>
@@ -714,6 +718,7 @@
                 <div class="stat-card" style="background: var(--bg-body);">
                     <div class="stat-title" id="my-homecoming-label">Homecoming Fund</div>
                     <div class="stat-value val-purple" id="my-homecoming">GH¢ 0.00</div>
+                    <div id="my-homecoming-suggested" style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;"></div>
                     <div id="my-homecoming-countdown"></div>
                     <div id="my-homecoming-thanks"></div>
                 </div>
@@ -732,7 +737,7 @@
                 <div class="stat-value val-white" id="stat-members">0</div>
             </div>
             <div class="stat-card">
-                <div class="stat-title">ACTIVE RATE</div>
+                <div class="stat-title">AMOUNT TO BE PAID</div>
                 <div class="stat-value val-cyan" id="stat-rate-active">GH¢ 20.00</div>
             </div>
             <div class="stat-card">
@@ -925,6 +930,11 @@
 
                     <label class="form-label">Runs For (days)</label>
                     <input type="number" id="settings-fund-expiry-days" value="120" min="1" max="365" step="1" style="width: 100%; padding: 10px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 6px; color: white; outline: none; margin-bottom: 20px;">
+
+                    <label class="form-label">Suggested Contribution Amount (GH¢)</label>
+                    <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 8px;">Shown to members as a guide, and pre-filled (but still editable) when you record a contribution. Not enforced — members can give more or less.</p>
+                    <input type="number" id="settings-fund-suggested-amount" value="100" min="0" step="any" style="width: 100%; padding: 10px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 6px; color: white; outline: none; margin-bottom: 10px;">
+                    <button class="btn btn-blue main-admin-only" id="save-suggested-amount-btn" style="width: 100%; justify-content: center; margin-bottom: 20px;" onclick="saveSuggestedAmount()">Save Suggested Amount</button>
 
                     <button class="btn btn-green main-admin-only" id="save-fund-settings-btn" style="width: 100%; justify-content: center; margin-bottom: 10px;" onclick="saveSpecialFundSettings()">Start / Restart Fund Round</button>
                     <button class="btn btn-gray main-admin-only" style="width: 100%; justify-content: center;" onclick="endFundRound(false)">End Round Now</button>
@@ -1189,6 +1199,7 @@
                     document.getElementById('my-homecoming').innerText = formatCurrency(loggedInMember.homecoming);
                     document.getElementById('my-homecoming-countdown').innerHTML = getFundCampaignBadgeHTML();
                     document.getElementById('my-homecoming-thanks').innerHTML = getFundThankYouHTML(loggedInMember);
+                    if (document.getElementById('my-homecoming-suggested')) renderSpecialFundLabels();
                     renderMemberMonthsGrid();
                 } else {
                     // Admin removed this member while they were logged in.
@@ -1222,6 +1233,7 @@
                 specialFundLabel = data.specialFundLabel || specialFundLabel;
                 specialFundExpiryDays = data.specialFundExpiryDays || specialFundExpiryDays;
                 specialFundStartedAt = data.specialFundStartedAt || null;
+                specialFundSuggestedAmount = (data.specialFundSuggestedAmount !== undefined && data.specialFundSuggestedAmount !== null) ? data.specialFundSuggestedAmount : specialFundSuggestedAmount;
                 secondaryAdminEmails = data.secondaryAdminEmails || [];
                 homepageVisualMode = data.homepageVisualMode || 'none';
 
@@ -1310,6 +1322,7 @@
         let specialFundLabel = 'Homecoming Fund';
         let specialFundExpiryDays = 120;
         let specialFundStartedAt = null;
+        let specialFundSuggestedAmount = 100;
 
         function renderSpecialFundLabels() {
             const el = (id) => document.getElementById(id);
@@ -1319,6 +1332,14 @@
             if (el('payment-homecoming-label')) el('payment-homecoming-label').innerText = `${specialFundLabel} Contribution (GH¢)`;
             if (el('settings-fund-label')) el('settings-fund-label').value = specialFundLabel;
             if (el('settings-fund-expiry-days')) el('settings-fund-expiry-days').value = specialFundExpiryDays;
+            if (el('settings-fund-suggested-amount')) el('settings-fund-suggested-amount').value = specialFundSuggestedAmount;
+
+            const suggestedText = specialFundSuggestedAmount > 0 ? `Suggested: ${formatCurrency(specialFundSuggestedAmount)}+` : '';
+            if (el('payment-homecoming-suggested')) el('payment-homecoming-suggested').innerText = suggestedText;
+            if (el('my-homecoming-suggested')) {
+                const showToMember = specialFundStartedAt && (!loggedInMember || !loggedInMember.homecoming);
+                el('my-homecoming-suggested').innerText = showToMember ? suggestedText : '';
+            }
 
             const banner = getFundCampaignBannerHTML();
             if (el('hero-fund-banner')) el('hero-fund-banner').innerHTML = banner;
@@ -1969,6 +1990,22 @@
             document.getElementById('my-homecoming').innerText = formatCurrency(member.homecoming);
             document.getElementById('my-homecoming-countdown').innerHTML = getFundCampaignBadgeHTML();
             document.getElementById('my-homecoming-thanks').innerHTML = getFundThankYouHTML(member);
+            renderSpecialFundLabels();
+
+            const dueBanner = document.getElementById('my-amount-due-banner');
+            const dueText = document.getElementById('my-amount-due-text');
+            if (fin.duesOwed > 0) {
+                dueBanner.style.background = 'rgba(239, 68, 68, 0.12)';
+                dueBanner.style.border = '1px solid var(--accent-red)';
+                dueText.style.color = 'var(--accent-red)';
+                const monthWord = fin.owedMonths.length === 1 ? 'month' : 'months';
+                dueText.innerText = `Amount Due: ${formatCurrency(fin.duesOwed)} (${fin.owedMonths.length} ${monthWord} outstanding)`;
+            } else {
+                dueBanner.style.background = 'rgba(16, 185, 129, 0.12)';
+                dueBanner.style.border = '1px solid var(--accent-green)';
+                dueText.style.color = 'var(--accent-green)';
+                dueText.innerText = `You're all caught up on your dues!`;
+            }
 
             renderMemberMonthsGrid();
             renderAdminTable();
@@ -2268,7 +2305,8 @@
                 `;
             }).join('');
 
-            document.getElementById('payment-homecoming-amount').value = member.homecoming > 0 ? member.homecoming : '';
+            const prefillSuggested = specialFundStartedAt && specialFundSuggestedAmount > 0;
+            document.getElementById('payment-homecoming-amount').value = member.homecoming > 0 ? member.homecoming : (prefillSuggested ? specialFundSuggestedAmount : '');
             document.getElementById('payment-modal').classList.add('active');
         }
 
@@ -3238,6 +3276,7 @@
         function saveSpecialFundSettings() {
             const newLabel = document.getElementById('settings-fund-label').value.trim();
             const newExpiryDays = parseInt(document.getElementById('settings-fund-expiry-days').value, 10);
+            const newSuggestedAmount = parseFloat(document.getElementById('settings-fund-suggested-amount').value) || 0;
 
             if (!newLabel) {
                 showToast('Please enter a fund name.', true);
@@ -3262,6 +3301,7 @@
             settingsDoc.set({
                 specialFundLabel: newLabel,
                 specialFundExpiryDays: newExpiryDays,
+                specialFundSuggestedAmount: newSuggestedAmount,
                 specialFundStartedAt: new Date().toISOString()
             }, { merge: true })
                 .then(() => {
@@ -3275,6 +3315,37 @@
                 .finally(() => {
                     saveBtn.innerText = 'Start / Restart Fund Round';
                     saveBtn.disabled = false;
+                });
+        }
+
+        function saveSuggestedAmount() {
+            const input = document.getElementById('settings-fund-suggested-amount');
+            const newAmount = parseFloat(input.value);
+
+            if (isNaN(newAmount) || newAmount < 0) {
+                showToast('Please enter a valid amount (0 or more).', true);
+                return;
+            }
+
+            const btn = document.getElementById('save-suggested-amount-btn');
+            const originalText = btn.innerText;
+            btn.innerText = 'Saving...';
+            btn.disabled = true;
+
+            settingsDoc.set({ specialFundSuggestedAmount: newAmount }, { merge: true })
+                .then(() => {
+                    specialFundSuggestedAmount = newAmount;
+                    renderSpecialFundLabels();
+                    logAudit(`${specialFundLabel} suggested amount set to GH¢ ${newAmount}.`);
+                    showToast('Suggested amount saved!');
+                })
+                .catch(err => {
+                    console.error('Suggested amount save failed:', err);
+                    showToast(getSaveErrorMessage(err), true);
+                })
+                .finally(() => {
+                    btn.innerText = originalText;
+                    btn.disabled = false;
                 });
         }
 
