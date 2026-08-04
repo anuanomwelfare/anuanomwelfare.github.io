@@ -1900,6 +1900,13 @@
                 return;
             }
 
+            const duplicate = findDuplicateMember(loggedInMember.name, newPhone, loggedInMember.id);
+            if (duplicate) {
+                if (!confirm(`${duplicate.name} already has this phone number on file. If you're sharing a number with them (e.g. a family phone), that's fine — otherwise, please double check you typed it correctly. Save anyway?`)) {
+                    return;
+                }
+            }
+
             const saveBtn = document.querySelector('#update-phone-modal .btn-blue');
             saveBtn.innerText = 'Saving...';
             saveBtn.disabled = true;
