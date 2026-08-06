@@ -129,6 +129,14 @@
             height: 100%; border-radius: 3px;
             transition: width 0.4s ease, background 0.4s ease;
         }
+        .payment-progress-track {
+            width: 100%; height: 8px; border-radius: 4px;
+            background: rgba(255,255,255,0.12); overflow: hidden;
+        }
+        .payment-progress-fill {
+            height: 100%; border-radius: 4px;
+            transition: width 0.4s ease, background 0.4s ease;
+        }
 
         .fund-campaign-banner {
             background: var(--bg-body); border: 1px solid var(--border-color); border-radius: 8px;
@@ -689,6 +697,14 @@
             <div id="my-amount-due-banner" style="padding: 18px 24px; border-radius: 12px; margin-bottom: 20px; text-align: center;">
                 <div id="my-amount-due-text" style="font-size: 1.3rem; font-weight: 700;"></div>
             </div>
+            <div style="padding: 16px 20px; border-radius: 12px; margin-bottom: 20px; background: var(--bg-card); border: 1px solid var(--border-color);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                    <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Payment Progress</span>
+                    <span id="my-progress-percent" style="font-size: 0.95rem; font-weight: 700;">0%</span>
+                </div>
+                <div class="payment-progress-track"><div class="payment-progress-fill" id="my-progress-fill" style="width: 0%;"></div></div>
+                <div id="my-progress-detail" style="font-size: 0.75rem; color: var(--text-muted); margin-top: 6px;"></div>
+            </div>
             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; flex-wrap: wrap; gap: 15px;">
                 <div>
                     <h2 id="logged-in-name" style="font-size: 1.5rem; color: var(--accent-orange);"></h2>
@@ -756,6 +772,15 @@
                 <div class="stat-title" id="stat-homecoming-label">HOMECOMING</div>
                 <div class="stat-value val-purple" id="stat-homecoming">GH¢ 0.00</div>
             </div>
+        </div>
+
+        <div style="padding: 16px 20px; border-radius: 12px; margin-bottom: 20px; background: var(--bg-card); border: 1px solid var(--border-color); max-width: 450px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                <span style="font-size: 0.8rem; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px;">Collection Rate</span>
+                <span id="admin-progress-percent" style="font-size: 0.95rem; font-weight: 700;">0%</span>
+            </div>
+            <div class="payment-progress-track"><div class="payment-progress-fill" id="admin-progress-fill" style="width: 0%;"></div></div>
+            <div id="admin-progress-detail" style="font-size: 0.75rem; color: var(--text-muted); margin-top: 6px;"></div>
         </div>
 
         <div id="homepage-payment-visual" style="margin-bottom: 30px;"></div>
@@ -846,6 +871,20 @@
             </div>
 
             <div id="admin-reports-view" class="hidden">
+                <div class="table-header-controls">
+                    <h3>COLLECTION PROGRESS — YEAR TO DATE</h3>
+                </div>
+                <div style="background: var(--bg-body); border: 1px solid var(--border-color); border-radius: 8px; padding: 20px; margin-bottom: 25px;">
+                    <div style="display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; flex-wrap: wrap; gap: 8px;">
+                        <span id="progress-report-summary" style="font-size: 0.85rem; color: var(--text-muted);"></span>
+                        <span id="progress-report-percent" style="font-size: 1.4rem; font-weight: bold; color: var(--accent-green);"></span>
+                    </div>
+                    <div style="width: 100%; height: 14px; background: var(--bg-card); border-radius: 7px; overflow: hidden;">
+                        <div id="progress-report-bar" style="height: 100%; background: var(--accent-green); border-radius: 7px; transition: width 0.4s ease; width: 0%;"></div>
+                    </div>
+                    <p style="font-size: 0.75rem; color: var(--text-muted); margin-top: 10px; margin-bottom: 0;">Based on what's been paid vs. what's expected by now, counting each member only from the month they joined. Advance payments aren't counted early.</p>
+                </div>
+
                 <div class="table-header-controls">
                     <h3>MONTHLY COLLECTIONS — ALL MEMBERS</h3>
                 </div>
@@ -1200,6 +1239,7 @@
                     document.getElementById('my-homecoming-countdown').innerHTML = getFundCampaignBadgeHTML();
                     document.getElementById('my-homecoming-thanks').innerHTML = getFundThankYouHTML(loggedInMember);
                     if (document.getElementById('my-homecoming-suggested')) renderSpecialFundLabels();
+                    renderMyProgress(loggedInMember);
                     renderMemberMonthsGrid();
                 } else {
                     // Admin removed this member while they were logged in.
@@ -1507,6 +1547,39 @@
             return { duesPaid, duesOwed, owedMonths, paidAdvance, advanceAmount, startIdx };
         }
 
+        // Progress is based on months paid vs. months expected so far (since
+        // joining), not GH¢ amounts — keeps it easy to read regardless of
+        // rate changes across years, and matches "X of Y months" phrasing.
+        function getMemberProgress(member) {
+            const fin = getMemberFinancials(member);
+            const currIdx = getCurrentMonthIndex();
+            const expectedCount = Math.max(0, currIdx - fin.startIdx + 1);
+            const paidCount = expectedCount - fin.owedMonths.length;
+            const percent = expectedCount > 0 ? Math.round((paidCount / expectedCount) * 100) : 100;
+            return { percent, paidCount, expectedCount };
+        }
+
+        // Same green/orange/red thresholds used for the homecoming countdown,
+        // but inverted: here HIGHER is better, since this measures progress
+        // rather than time running out.
+        function progressColor(percent) {
+            if (percent >= 90) return 'var(--accent-green)';
+            if (percent >= 60) return 'var(--accent-orange)';
+            return 'var(--accent-red)';
+        }
+
+        function renderMyProgress(member) {
+            const { percent, paidCount, expectedCount } = getMemberProgress(member);
+            const color = progressColor(percent);
+            document.getElementById('my-progress-percent').innerText = `${percent}%`;
+            document.getElementById('my-progress-percent').style.color = color;
+            document.getElementById('my-progress-fill').style.width = `${percent}%`;
+            document.getElementById('my-progress-fill').style.background = color;
+            document.getElementById('my-progress-detail').innerText = expectedCount > 0
+                ? `${paidCount} of ${expectedCount} month${expectedCount === 1 ? '' : 's'} paid since joining`
+                : `You're all caught up — no months due yet since joining.`;
+        }
+
         function showToast(message, isError = false) {
             const container = document.getElementById('toast-container');
             const toast = document.createElement('div');
@@ -1526,6 +1599,7 @@
             let totalArrears = 0;
             let totalHomecoming = 0;
             let totalAdvanceAmount = 0;
+            let totalExpectedSoFar = 0; // everything that should have been paid by now, across all members
 
             membersData.forEach(m => {
                 const fin = getMemberFinancials(m);
@@ -1533,6 +1607,7 @@
                 totalArrears += fin.duesOwed;
                 totalHomecoming += m.homecoming || 0;
                 totalAdvanceAmount += fin.advanceAmount;
+                totalExpectedSoFar += (fin.duesPaid - fin.advanceAmount) + fin.duesOwed;
             });
 
             document.getElementById('stat-members').innerText = membersData.length;
@@ -1541,6 +1616,15 @@
             document.getElementById('stat-arrears').innerText = formatCurrency(totalArrears);
             document.getElementById('stat-advance').innerText = formatCurrency(totalAdvanceAmount);
             document.getElementById('stat-homecoming').innerText = formatCurrency(totalHomecoming);
+
+            const collectedSoFar = totalDuesPaid - totalAdvanceAmount;
+            const collectionRate = totalExpectedSoFar > 0 ? Math.round((collectedSoFar / totalExpectedSoFar) * 100) : 100;
+            const rateColor = progressColor(collectionRate);
+            document.getElementById('admin-progress-percent').innerText = `${collectionRate}%`;
+            document.getElementById('admin-progress-percent').style.color = rateColor;
+            document.getElementById('admin-progress-fill').style.width = `${collectionRate}%`;
+            document.getElementById('admin-progress-fill').style.background = rateColor;
+            document.getElementById('admin-progress-detail').innerText = `${formatCurrency(collectedSoFar)} collected of ${formatCurrency(totalExpectedSoFar)} expected so far`;
         }
 
         let memberCardsPage = 1;
@@ -1991,6 +2075,7 @@
             document.getElementById('my-homecoming-countdown').innerHTML = getFundCampaignBadgeHTML();
             document.getElementById('my-homecoming-thanks').innerHTML = getFundThankYouHTML(member);
             renderSpecialFundLabels();
+            renderMyProgress(member);
 
             const dueBanner = document.getElementById('my-amount-due-banner');
             const dueText = document.getElementById('my-amount-due-text');
@@ -2490,6 +2575,7 @@
                 renderDefaultersView();
             } else if(view === 'reports') {
                 document.getElementById('admin-reports-view').classList.remove('hidden');
+                renderCollectionProgress();
                 renderCollectionsChart();
                 renderArrearsTrendChart();
             } else if(view === 'audit') {
@@ -2545,6 +2631,34 @@
         // ------------------------------------------------------------
         // MONTHLY COLLECTIONS REPORT (chart)
         // ------------------------------------------------------------
+        function getAssociationProgress() {
+            let expectedSoFar = 0;
+            let paidSoFar = 0;
+            membersData.forEach(member => {
+                const fin = getMemberFinancials(member);
+                const paidNotAdvance = fin.duesPaid - fin.advanceAmount;
+                expectedSoFar += paidNotAdvance + fin.duesOwed;
+                paidSoFar += paidNotAdvance;
+            });
+            const percent = expectedSoFar > 0 ? (paidSoFar / expectedSoFar) * 100 : 0;
+            return { expectedSoFar, paidSoFar, percent };
+        }
+
+        function renderCollectionProgress() {
+            const { expectedSoFar, paidSoFar, percent } = getAssociationProgress();
+            const clamped = Math.max(0, Math.min(100, percent));
+
+            document.getElementById('progress-report-summary').innerText =
+                `${formatCurrency(paidSoFar)} collected of ${formatCurrency(expectedSoFar)} expected so far`;
+            document.getElementById('progress-report-percent').innerText = `${clamped.toFixed(0)}%`;
+
+            const bar = document.getElementById('progress-report-bar');
+            bar.style.width = `${clamped}%`;
+            const color = clamped >= 75 ? 'var(--accent-green)' : (clamped >= 50 ? 'var(--accent-orange)' : 'var(--accent-red)');
+            bar.style.background = color;
+            document.getElementById('progress-report-percent').style.color = color;
+        }
+
         let collectionsChartInstance = null;
 
         function renderCollectionsChart() {
