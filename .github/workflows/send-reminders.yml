@@ -1,0 +1,35 @@
+name: Send Payment Status Reminders
+
+"on":
+  schedule:
+    # 9am Accra time (UTC+0, no offset needed), 1st of every month.
+    # Change the "1" to a different day if you'd prefer a different date.
+    - cron: '0 9 1 * *'
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type SEND to confirm — this texts every member'
+        required: true
+
+jobs:
+  send-reminders:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        working-directory: scripts
+        run: npm install
+
+      - name: Send status texts to all members
+        working-directory: scripts
+        env:
+          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+          MNOTIFY_API_KEY: ${{ secrets.MNOTIFY_API_KEY }}
+          TRIGGER_EVENT: ${{ github.event_name }}
+          CONFIRM_INPUT: ${{ github.event.inputs.confirm }}
+        run: node send-reminders.js
