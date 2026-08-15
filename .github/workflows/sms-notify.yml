@@ -1,0 +1,27 @@
+name: Send Payment Confirmation SMS
+
+"on":
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+jobs:
+  send-sms:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        working-directory: scripts
+        run: npm install
+
+      - name: Send confirmation texts for new payments
+        working-directory: scripts
+        env:
+          FIREBASE_SERVICE_ACCOUNT_JSON: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
+          MNOTIFY_API_KEY: ${{ secrets.MNOTIFY_API_KEY }}
+        run: node send-sms-notifications.js
