@@ -8,8 +8,16 @@ name: Send Payment Status Reminders
   workflow_dispatch:
     inputs:
       confirm:
-        description: 'Type SEND to confirm — this texts every member'
+        description: 'Type SEND to confirm — this texts members'
         required: true
+      audience:
+        description: 'Who should get a text?'
+        required: true
+        default: everyone
+        type: choice
+        options:
+          - everyone
+          - owing-only
 
 jobs:
   send-reminders:
@@ -32,4 +40,5 @@ jobs:
           MNOTIFY_API_KEY: ${{ secrets.MNOTIFY_API_KEY }}
           TRIGGER_EVENT: ${{ github.event_name }}
           CONFIRM_INPUT: ${{ github.event.inputs.confirm }}
+          AUDIENCE: ${{ github.event.inputs.audience }}
         run: node send-reminders.js
