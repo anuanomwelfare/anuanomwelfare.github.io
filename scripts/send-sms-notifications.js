@@ -80,22 +80,6 @@ function formatCurrency(amount) {
   return `GH¢ ${(amount || 0).toFixed(2)}`;
 }
 
-// Association-wide totals, mirroring getFinancialTotals() in index.html.
-function getFinancialTotals(allMembers, welfareMonths, currIdx, ratesByYear, activeYear) {
-  let totalDuesPaid = 0;
-  let totalArrears = 0;
-  let totalHomecoming = 0;
-
-  allMembers.forEach(member => {
-    const fin = getMemberFinancials(member, welfareMonths, currIdx, ratesByYear, activeYear);
-    totalDuesPaid += fin.duesPaid;
-    totalArrears += fin.duesOwed;
-    totalHomecoming += member.homecoming || 0;
-  });
-
-  return { totalDuesPaid, totalArrears, totalHomecoming };
-}
-
 function normalizeGhanaPhone(raw) {
   if (!raw) return null;
   let p = String(raw).replace(/[\s-]/g, '');
@@ -118,11 +102,6 @@ async function main() {
   const snapshot = await db.collection('members').get();
   console.log(`Checking ${snapshot.size} member(s) for new payments...`);
 
-  // Computed once per run, not per-member — this is the same for everyone.
-  const allMembers = snapshot.docs.map(d => d.data());
-  const { totalDuesPaid, totalArrears, totalHomecoming } = getFinancialTotals(allMembers, welfareMonths, currIdx, ratesByYear, activeYear);
-  const breakdownText = `\n\nAssociation totals as of today:\nDues collected: ${formatCurrency(totalDuesPaid)}\nDues owed: ${formatCurrency(totalArrears)}\n${specialFundLabel}: ${formatCurrency(totalHomecoming)}`;
-
   for (const doc of snapshot.docs) {
     const member = doc.data();
     const paidMonths = member.paidMonths || [];
@@ -144,6 +123,11 @@ async function main() {
     const monthsText = newlyPaid.length === 1
       ? newlyPaid[0]
       : `${newlyPaid.slice(0, -1).join(', ')} and ${newlyPaid[newlyPaid.length - 1]}`;
+
+    // This member's own standing — not the association-wide totals.
+    const fin = getMemberFinancials(member, welfareMonths, currIdx, ratesByYear, activeYear);
+    const breakdownText = `\n\nHere's a breakdown:\nTotal dues paid: ${formatCurrency(fin.duesPaid)}\nTotal arrears: ${formatCurrency(fin.duesOwed)}\n${specialFundLabel}: ${formatCurrency(member.homecoming || 0)}`;
+
     const message = `Hi ${member.name}, your Anuanom 2016 Welfare payment for ${monthsText} has been recorded. Thank you!${breakdownText}`;
 
     try {
