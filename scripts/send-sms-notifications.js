@@ -1,8 +1,13 @@
 // Checks every member for newly-paid months (since the last time this
-// script ran) and sends a payment confirmation text via mNotify for each.
+// script ran) and sends a payment confirmation text via mNotify for each,
+// including a snapshot of the association's overall financial standing.
 // Runs on a schedule via GitHub Actions instead of a Firebase Cloud
 // Function — this needs no Firebase plan upgrade at all, since it only
 // uses Firestore (free on the Spark plan), not Cloud Functions.
+//
+// The month/rate/arrears math below is deliberately copied to match
+// index.html's getMemberFinancials() / getFinancialTotals() exactly — if
+// those ever change in the app, mirror the change here too.
 
 const { initializeApp, cert } = require('firebase-admin/app');
 const { getFirestore } = require('firebase-admin/firestore');
@@ -18,9 +23,105 @@ const MNOTIFY_API_KEY = process.env.MNOTIFY_API_KEY;
 // sender instead — ask your friend which applies to their account.
 const SMS_SENDER_ID = 'Anuanom';
 
+const CALENDAR_START_YEAR = 2026;
+const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+
+function generateWelfareMonths(startYear, endYear) {
+  const months = [];
+  for (let year = startYear; year <= endYear; year++) {
+    const fromMonth = (year === startYear) ? 6 : 0; // association's cycle starts in July
+    for (let m = fromMonth; m < 12; m++) {
+      months.push(`${MONTH_NAMES[m]} ${year}`);
+    }
+  }
+  return months;
+}
+
+function getCurrentMonthIndex(welfareMonths, calendarEndYear) {
+  const now = new Date();
+  const currentStr = `${MONTH_NAMES[now.getMonth()]} ${now.getFullYear()}`;
+  let currIdx = welfareMonths.indexOf(currentStr);
+  if (currIdx === -1) {
+    currIdx = (now.getFullYear() > calendarEndYear || (now.getFullYear() === calendarEndYear && now.getMonth() > 11)) ? welfareMonths.length - 1 : 0;
+  }
+  return currIdx;
+}
+
+function getRateForYear(year, ratesByYear, activeYear) {
+  if (ratesByYear[year] !== undefined) return ratesByYear[year];
+  if (ratesByYear[activeYear] !== undefined) return ratesByYear[activeYear];
+  return 20.00;
+}
+
+// Mirrors getMemberFinancials() in index.html: total paid (incl. advance)
+// and total owed so far, for one member.
+function getMemberFinancials(member, welfareMonths, currIdx, ratesByYear, activeYear) {
+  const paidMonths = member.paidMonths || [];
+  const joinIdx = member.joinMonth ? welfareMonths.indexOf(member.joinMonth) : 0;
+  const startIdx = joinIdx === -1 ? 0 : joinIdx;
+
+  let duesPaid = 0;
+  let duesOwed = 0;
+
+  welfareMonths.forEach((m, idx) => {
+    if (idx < startIdx) return; // not a member yet during this month
+    const rate = getRateForYear(m.split(' ')[1], ratesByYear, activeYear);
+    if (paidMonths.includes(m)) {
+      duesPaid += rate;
+    } else if (idx <= currIdx) {
+      duesOwed += rate;
+    }
+  });
+
+  return { duesPaid, duesOwed };
+}
+
+function formatCurrency(amount) {
+  return `GH¢ ${(amount || 0).toFixed(2)}`;
+}
+
+// Association-wide totals, mirroring getFinancialTotals() in index.html.
+function getFinancialTotals(allMembers, welfareMonths, currIdx, ratesByYear, activeYear) {
+  let totalDuesPaid = 0;
+  let totalArrears = 0;
+  let totalHomecoming = 0;
+
+  allMembers.forEach(member => {
+    const fin = getMemberFinancials(member, welfareMonths, currIdx, ratesByYear, activeYear);
+    totalDuesPaid += fin.duesPaid;
+    totalArrears += fin.duesOwed;
+    totalHomecoming += member.homecoming || 0;
+  });
+
+  return { totalDuesPaid, totalArrears, totalHomecoming };
+}
+
+function normalizeGhanaPhone(raw) {
+  if (!raw) return null;
+  let p = String(raw).replace(/[\s-]/g, '');
+  if (p.startsWith('+233')) p = '0' + p.slice(4);
+  else if (p.startsWith('233')) p = '0' + p.slice(3);
+  return /^0\d{9}$/.test(p) ? p : null;
+}
+
 async function main() {
+  const settingsSnap = await db.collection('settings').doc('association').get();
+  const settings = settingsSnap.exists ? settingsSnap.data() : {};
+  const calendarEndYear = settings.calendarEndYear || 2028;
+  const ratesByYear = settings.ratesByYear || { '2026': 20.00 };
+  const activeYear = settings.activeYear || '2026';
+  const specialFundLabel = settings.specialFundLabel || 'Homecoming Fund';
+
+  const welfareMonths = generateWelfareMonths(CALENDAR_START_YEAR, calendarEndYear);
+  const currIdx = getCurrentMonthIndex(welfareMonths, calendarEndYear);
+
   const snapshot = await db.collection('members').get();
   console.log(`Checking ${snapshot.size} member(s) for new payments...`);
+
+  // Computed once per run, not per-member — this is the same for everyone.
+  const allMembers = snapshot.docs.map(d => d.data());
+  const { totalDuesPaid, totalArrears, totalHomecoming } = getFinancialTotals(allMembers, welfareMonths, currIdx, ratesByYear, activeYear);
+  const breakdownText = `\n\nAssociation totals as of today:\nDues collected: ${formatCurrency(totalDuesPaid)}\nDues owed: ${formatCurrency(totalArrears)}\n${specialFundLabel}: ${formatCurrency(totalHomecoming)}`;
 
   for (const doc of snapshot.docs) {
     const member = doc.data();
@@ -43,7 +144,7 @@ async function main() {
     const monthsText = newlyPaid.length === 1
       ? newlyPaid[0]
       : `${newlyPaid.slice(0, -1).join(', ')} and ${newlyPaid[newlyPaid.length - 1]}`;
-    const message = `Hi ${member.name}, your Anuanom 2016 Welfare payment for ${monthsText} has been recorded. Thank you!`;
+    const message = `Hi ${member.name}, your Anuanom 2016 Welfare payment for ${monthsText} has been recorded. Thank you!${breakdownText}`;
 
     try {
       const response = await fetch(`https://api.mnotify.com/api/sms/quick?key=${MNOTIFY_API_KEY}`, {
@@ -79,18 +180,6 @@ async function main() {
       console.error(`Error sending SMS to ${member.name}: ${err.message}`);
     }
   }
-}
-
-// Members' phone numbers may have been typed as 0XXXXXXXXX, +233XXXXXXXXX,
-// or 233XXXXXXXXX depending on who entered them — this normalizes all three
-// to the local 0XXXXXXXXX format mNotify's API expects, and returns null for
-// anything that still doesn't look like a valid Ghana number.
-function normalizeGhanaPhone(raw) {
-  if (!raw) return null;
-  let p = String(raw).replace(/[\s-]/g, '');
-  if (p.startsWith('+233')) p = '0' + p.slice(4);
-  else if (p.startsWith('233')) p = '0' + p.slice(3);
-  return /^0\d{9}$/.test(p) ? p : null;
 }
 
 main()
