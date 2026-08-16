@@ -16,7 +16,7 @@ initializeApp({ credential: cert(serviceAccount) });
 const db = getFirestore();
 
 const MNOTIFY_API_KEY = process.env.MNOTIFY_API_KEY;
-const SMS_SENDER_ID = 'Anuanom16';
+const SMS_SENDER_ID = 'Anuanom';
 
 const CALENDAR_START_YEAR = 2026;
 const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
