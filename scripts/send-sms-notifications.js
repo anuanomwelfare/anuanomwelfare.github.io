@@ -16,7 +16,7 @@ const MNOTIFY_API_KEY = process.env.MNOTIFY_API_KEY;
 // Ghana sender IDs are capped at 11 characters and must be pre-approved by
 // mNotify. Until yours is registered, you may need mNotify's shared default
 // sender instead — ask your friend which applies to their account.
-const SMS_SENDER_ID = 'Anuanom16';
+const SMS_SENDER_ID = 'Anuanom';
 
 async function main() {
   const snapshot = await db.collection('members').get();
