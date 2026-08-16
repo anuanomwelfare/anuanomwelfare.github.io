@@ -109,21 +109,28 @@ async function main() {
   const welfareMonths = generateWelfareMonths(CALENDAR_START_YEAR, calendarEndYear);
   const currIdx = getCurrentMonthIndex(welfareMonths, calendarEndYear);
 
-  const snapshot = await db.collection('members').get();
-  console.log(`Sending status texts to ${snapshot.size} member(s)...`);
+  const AUDIENCE = process.env.AUDIENCE === 'owing-only' ? 'owing-only' : 'everyone';
 
-  let sent = 0, skipped = 0, failed = 0;
+  const snapshot = await db.collection('members').get();
+  console.log(`Sending status texts to ${snapshot.size} member(s)... (audience: ${AUDIENCE})`);
+
+  let sent = 0, skipped = 0, failed = 0, notInAudience = 0;
 
   for (const doc of snapshot.docs) {
     const member = doc.data();
+    const { owedMonths, duesOwed } = getMemberArrears(member, welfareMonths, currIdx, ratesByYear, activeYear);
+
+    if (AUDIENCE === 'owing-only' && owedMonths.length === 0) {
+      notInAudience++; // fully paid up, and this run is only for people who owe
+      continue;
+    }
+
     const phone = normalizeGhanaPhone(member.phone) || normalizeGhanaPhone(member.phone2);
     if (!phone) {
       console.warn(`No usable phone for ${member.name} (${doc.id}) — skipped.`);
       skipped++;
       continue;
     }
-
-    const { owedMonths, duesOwed } = getMemberArrears(member, welfareMonths, currIdx, ratesByYear, activeYear);
 
     const message = owedMonths.length > 0
       ? `Hi ${member.name}, you currently owe ${formatCurrency(duesOwed)} for ${owedMonths.length} month${owedMonths.length === 1 ? '' : 's'} (from ${owedMonths[0]}) in Anuanom 2016 Welfare dues. Please settle when you can. Thank you!`
@@ -139,11 +146,11 @@ async function main() {
     }
   }
 
-  console.log(`Done. Sent: ${sent}, skipped (no phone): ${skipped}, failed: ${failed}.`);
+  console.log(`Done. Sent: ${sent}, skipped (no phone): ${skipped}, not in audience: ${notInAudience}, failed: ${failed}.`);
 
   await db.collection('auditLogs').add({
     time: new Date().toLocaleString('en-GB', { timeZone: 'Africa/Accra' }),
-    action: `Payment status texts sent to all members (${sent} sent, ${skipped} skipped, ${failed} failed).`,
+    action: `Payment status texts sent (audience: ${AUDIENCE}) — ${sent} sent, ${skipped} skipped, ${notInAudience} not in audience, ${failed} failed.`,
     createdAt: new Date().toISOString()
   });
 }
