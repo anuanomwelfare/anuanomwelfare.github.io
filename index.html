@@ -872,6 +872,30 @@
 
             <div id="admin-reports-view" class="hidden">
                 <div class="table-header-controls">
+                    <h3>FINANCIAL BREAKDOWN</h3>
+                    <div class="table-actions">
+                        <button class="btn btn-blue" onclick="downloadFinancialBreakdownPDF()">⬇ Export PDF</button>
+                    </div>
+                </div>
+                <div id="financial-breakdown-content" style="background: var(--bg-body); border: 1px solid var(--border-color); border-radius: 8px; padding: 20px; margin-bottom: 25px;">
+                    <p style="font-size: 0.8rem; color: var(--text-muted); margin: 0 0 16px 0;">Anuanom 2016 Welfare Association — as of <span id="breakdown-as-of-date"></span></p>
+                    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 18px;">
+                        <div>
+                            <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Dues Collected</div>
+                            <div id="breakdown-dues-collected" class="stat-value val-green" style="font-size: 1.3rem;"></div>
+                        </div>
+                        <div>
+                            <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Dues Owed (Arrears)</div>
+                            <div id="breakdown-dues-owed" class="stat-value val-red" style="font-size: 1.3rem;"></div>
+                        </div>
+                        <div>
+                            <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;" id="breakdown-homecoming-label">Homecoming Fund Collected</div>
+                            <div id="breakdown-homecoming-collected" class="stat-value val-purple" style="font-size: 1.3rem;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="table-header-controls">
                     <h3>COLLECTION PROGRESS — YEAR TO DATE</h3>
                 </div>
                 <div style="background: var(--bg-body); border: 1px solid var(--border-color); border-radius: 8px; padding: 20px; margin-bottom: 25px;">
@@ -1594,7 +1618,7 @@
             }, 3000);
         }
 
-        function renderStats() {
+        function getFinancialTotals() {
             let totalDuesPaid = 0;
             let totalArrears = 0;
             let totalHomecoming = 0;
@@ -1609,6 +1633,12 @@
                 totalAdvanceAmount += fin.advanceAmount;
                 totalExpectedSoFar += (fin.duesPaid - fin.advanceAmount) + fin.duesOwed;
             });
+
+            return { totalDuesPaid, totalArrears, totalHomecoming, totalAdvanceAmount, totalExpectedSoFar };
+        }
+
+        function renderStats() {
+            const { totalDuesPaid, totalArrears, totalHomecoming, totalAdvanceAmount, totalExpectedSoFar } = getFinancialTotals();
 
             document.getElementById('stat-members').innerText = membersData.length;
             document.getElementById('stat-rate-active').innerText = `${formatCurrency(getRateForYear(activeYear))} (${activeYear})`;
@@ -2575,6 +2605,7 @@
                 renderDefaultersView();
             } else if(view === 'reports') {
                 document.getElementById('admin-reports-view').classList.remove('hidden');
+                renderFinancialBreakdown();
                 renderCollectionProgress();
                 renderCollectionsChart();
                 renderArrearsTrendChart();
@@ -2631,6 +2662,32 @@
         // ------------------------------------------------------------
         // MONTHLY COLLECTIONS REPORT (chart)
         // ------------------------------------------------------------
+        function renderFinancialBreakdown() {
+            const { totalDuesPaid, totalArrears, totalHomecoming } = getFinancialTotals();
+            document.getElementById('breakdown-dues-collected').innerText = formatCurrency(totalDuesPaid);
+            document.getElementById('breakdown-dues-owed').innerText = formatCurrency(totalArrears);
+            document.getElementById('breakdown-homecoming-collected').innerText = formatCurrency(totalHomecoming);
+            document.getElementById('breakdown-homecoming-label').innerText = `${specialFundLabel} Collected`;
+            document.getElementById('breakdown-as-of-date').innerText = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+        }
+
+        function downloadFinancialBreakdownPDF() {
+            const element = document.getElementById('financial-breakdown-content');
+            const opt = {
+                margin: 10,
+                filename: `Anuanom_Welfare_Financial_Breakdown_${new Date().toISOString().slice(0,10)}.pdf`,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true, backgroundColor: '#121929' },
+                jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+            };
+            html2pdf().from(element).set(opt).save().then(() => {
+                showToast('Financial breakdown downloaded');
+            }).catch(err => {
+                console.error('PDF generation failed:', err);
+                showToast('Could not generate the PDF — please try again.', true);
+            });
+        }
+
         function getAssociationProgress() {
             let expectedSoFar = 0;
             let paidSoFar = 0;
