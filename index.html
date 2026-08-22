@@ -114,13 +114,6 @@
         .val-orange { color: var(--accent-orange); }
         .val-purple { color: #a78bfa; }
 
-        .homecoming-timer-badge {
-            display: inline-flex; flex-direction: column; align-items: center; gap: 6px;
-            margin-top: 8px; padding: 6px 14px;
-            border-radius: 12px; font-size: 0.75rem; font-weight: 600;
-            min-width: 120px;
-            transition: color 0.4s ease, background 0.4s ease, border-color 0.4s ease;
-        }
         .timer-progress-track {
             width: 100%; height: 5px; border-radius: 3px;
             background: rgba(255,255,255,0.12); overflow: hidden;
@@ -138,14 +131,6 @@
             transition: width 0.4s ease, background 0.4s ease;
         }
 
-        .fund-campaign-banner {
-            background: var(--bg-body); border: 1px solid var(--border-color); border-radius: 8px;
-            padding: 14px 16px; margin-bottom: 20px; text-align: center;
-        }
-        .fund-campaign-banner .fund-campaign-name {
-            font-size: 0.8rem; color: var(--accent-blue); font-weight: bold;
-            text-transform: uppercase; letter-spacing: 0.5px;
-        }
         /* Reusable form label — replaces ~17 identical inline style attributes
            that were scattered across every modal and settings card. */
         .form-label { font-size: 0.85rem; color: var(--accent-blue); display: block; margin-bottom: 5px; font-weight: bold; }
@@ -651,10 +636,6 @@
                 <!-- Injected via JS -->
             </div>
 
-            <label id="payment-homecoming-label" style="font-size: 0.8rem; color: var(--accent-purple); display: block; margin-bottom: 5px; font-weight: bold;">Homecoming Fund Contribution (GH¢)</label>
-            <div id="payment-homecoming-suggested" style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 5px;"></div>
-            <input type="number" id="payment-homecoming-amount" placeholder="0.00" min="0" step="any">
-
             <div class="modal-actions" style="margin-top: 15px;">
                 <button class="btn btn-gray" style="flex: 1;" onclick="closePaymentModal()">Cancel</button>
                 <button class="btn btn-green" style="flex: 1;" onclick="recordPayment()">Save Payment</button>
@@ -689,7 +670,6 @@
             <h2>Welcome to Anuanom 2016 Welfare</h2>
             <p>Akim Swedru Senior High School Old Students Association. Monthly contributions start in <strong>July 2026</strong>.<br>Select your name below and enter your PIN to login.</p>
             <a class="forgot-pin-link" style="margin-top: 15px;" onclick="openHelpModal()">❓ New here? How this works</a>
-            <div id="hero-fund-banner" style="margin-top: 20px;"></div>
         </div>
 
         <!-- PERSONAL MEMBER DASHBOARD (Hidden until logged in) -->
@@ -731,13 +711,6 @@
                     <div class="stat-title">Advanced Amount</div>
                     <div class="stat-value val-orange" id="my-advance-amount">GH¢ 0.00</div>
                 </div>
-                <div class="stat-card" style="background: var(--bg-body);">
-                    <div class="stat-title" id="my-homecoming-label">Homecoming Fund</div>
-                    <div class="stat-value val-purple" id="my-homecoming">GH¢ 0.00</div>
-                    <div id="my-homecoming-suggested" style="font-size: 0.75rem; color: var(--text-muted); margin-top: 2px;"></div>
-                    <div id="my-homecoming-countdown"></div>
-                    <div id="my-homecoming-thanks"></div>
-                </div>
             </div>
 
             <h3 style="font-size: 1rem; color: var(--accent-blue); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 15px;">Month-by-Month Status</h3>
@@ -767,10 +740,6 @@
             <div class="stat-card">
                 <div class="stat-title">ADVANCE AMT</div>
                 <div class="stat-value val-orange" id="stat-advance">GH¢ 0.00</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-title" id="stat-homecoming-label">HOMECOMING</div>
-                <div class="stat-value val-purple" id="stat-homecoming">GH¢ 0.00</div>
             </div>
         </div>
 
@@ -803,7 +772,6 @@
         <div id="admin-dashboard-section" class="dashboard-content hidden">
             <div id="view-only-banner" class="hidden">👁 You're logged in as a secondary admin — you can view and export everything, but changes are restricted to the main admin.</div>
             <div id="admin-ledger-view">
-                <div id="ledger-fund-banner"></div>
                 <div class="table-header-controls">
                     <div class="table-title-group">
                         <h3>ALPHABETICAL DIRECTORY & MONTHLY LEDGER</h3>
@@ -830,7 +798,6 @@
                                 <th>PAID & ADVANCED MONTHS</th>
                                 <th>OWED MONTHS / ARREARS</th>
                                 <th>LAST LOGIN</th>
-                                <th id="ledger-homecoming-header">HOMECOMING</th>
                                 <th>ACTIONS</th>
                             </tr>
                         </thead>
@@ -887,10 +854,6 @@
                         <div>
                             <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Dues Owed (Arrears)</div>
                             <div id="breakdown-dues-owed" class="stat-value val-red" style="font-size: 1.3rem;"></div>
-                        </div>
-                        <div>
-                            <div style="font-size: 0.75rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;" id="breakdown-homecoming-label">Homecoming Fund Collected</div>
-                            <div id="breakdown-homecoming-collected" class="stat-value val-purple" style="font-size: 1.3rem;"></div>
                         </div>
                     </div>
                 </div>
@@ -981,26 +944,6 @@
                     <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 15px;">The calendar currently runs through December <strong id="settings-calendar-end-year-display">2028</strong>. Add more years here before it runs out — new years start at the same rate as the last year, editable above afterward.</p>
                     <input type="number" id="settings-extend-year" placeholder="e.g. 2029" style="width: 100%; padding: 10px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 6px; color: white; outline: none; margin-bottom: 15px;">
                     <button class="btn btn-blue main-admin-only" style="width: 100%; justify-content: center;" onclick="extendCalendar()">Extend Calendar</button>
-                </div>
-
-                <div style="max-width: 450px; background: var(--bg-body); padding: 25px; border-radius: 8px; border: 1px solid var(--border-color); margin-top: 20px;">
-                    <label class="form-label">Temporary Contribution Fund</label>
-                    <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 10px;">This is the "Homecoming Fund" field — rename it whenever a different special, time-limited collection comes up (a funeral contribution, a graduation contribution, etc.). Starting a round shows a countdown to <strong>every</strong> member — even ones who haven't contributed yet — so people are reminded to join in.</p>
-                    <p id="settings-fund-status" style="font-size: 0.85rem; margin-bottom: 15px;"></p>
-
-                    <label class="form-label">Fund Name</label>
-                    <input type="text" id="settings-fund-label" value="Homecoming Fund" style="width: 100%; padding: 10px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 6px; color: white; outline: none; margin-bottom: 15px;">
-
-                    <label class="form-label">Runs For (days)</label>
-                    <input type="number" id="settings-fund-expiry-days" value="120" min="1" max="365" step="1" style="width: 100%; padding: 10px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 6px; color: white; outline: none; margin-bottom: 20px;">
-
-                    <label class="form-label">Suggested Contribution Amount (GH¢)</label>
-                    <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 8px;">Shown to members as a guide, and pre-filled (but still editable) when you record a contribution. Not enforced — members can give more or less.</p>
-                    <input type="number" id="settings-fund-suggested-amount" value="100" min="0" step="any" style="width: 100%; padding: 10px; background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 6px; color: white; outline: none; margin-bottom: 10px;">
-                    <button class="btn btn-blue main-admin-only" id="save-suggested-amount-btn" style="width: 100%; justify-content: center; margin-bottom: 20px;" onclick="saveSuggestedAmount()">Save Suggested Amount</button>
-
-                    <button class="btn btn-green main-admin-only" id="save-fund-settings-btn" style="width: 100%; justify-content: center; margin-bottom: 10px;" onclick="saveSpecialFundSettings()">Start / Restart Fund Round</button>
-                    <button class="btn btn-gray main-admin-only" style="width: 100%; justify-content: center;" onclick="endFundRound(false)">End Round Now</button>
                 </div>
                 </div>
 
@@ -1259,10 +1202,6 @@
                     document.getElementById('my-dues').innerText = formatCurrency(fin.duesPaid);
                     document.getElementById('my-owed').innerText = formatCurrency(fin.duesOwed);
                     document.getElementById('my-advance-amount').innerText = formatCurrency(fin.advanceAmount);
-                    document.getElementById('my-homecoming').innerText = formatCurrency(loggedInMember.homecoming);
-                    document.getElementById('my-homecoming-countdown').innerHTML = getFundCampaignBadgeHTML();
-                    document.getElementById('my-homecoming-thanks').innerHTML = getFundThankYouHTML(loggedInMember);
-                    if (document.getElementById('my-homecoming-suggested')) renderSpecialFundLabels();
                     renderMyProgress(loggedInMember);
                     renderMemberMonthsGrid();
                 } else {
@@ -1294,10 +1233,6 @@
                     // localStorage unavailable — no big deal, just means the
                     // loading screen won't have a cached logo to show early.
                 }
-                specialFundLabel = data.specialFundLabel || specialFundLabel;
-                specialFundExpiryDays = data.specialFundExpiryDays || specialFundExpiryDays;
-                specialFundStartedAt = data.specialFundStartedAt || null;
-                specialFundSuggestedAmount = (data.specialFundSuggestedAmount !== undefined && data.specialFundSuggestedAmount !== null) ? data.specialFundSuggestedAmount : specialFundSuggestedAmount;
                 secondaryAdminEmails = data.secondaryAdminEmails || [];
                 homepageVisualMode = data.homepageVisualMode || 'none';
 
@@ -1313,7 +1248,6 @@
             // can never create it, which is intentional).
             renderStats();
             renderLogo();
-            renderSpecialFundLabels();
             renderMemberMonthsGrid();
             renderAdminTable(document.getElementById('admin-table-search') ? document.getElementById('admin-table-search').value : '');
             renderHomepageVisual();
@@ -1383,143 +1317,6 @@
             return currIdx;
         }
 
-        let specialFundLabel = 'Homecoming Fund';
-        let specialFundExpiryDays = 120;
-        let specialFundStartedAt = null;
-        let specialFundSuggestedAmount = 100;
-
-        function renderSpecialFundLabels() {
-            const el = (id) => document.getElementById(id);
-            if (el('my-homecoming-label')) el('my-homecoming-label').innerText = specialFundLabel;
-            if (el('stat-homecoming-label')) el('stat-homecoming-label').innerText = specialFundLabel.toUpperCase();
-            if (el('ledger-homecoming-header')) el('ledger-homecoming-header').innerText = specialFundLabel.toUpperCase();
-            if (el('payment-homecoming-label')) el('payment-homecoming-label').innerText = `${specialFundLabel} Contribution (GH¢)`;
-            if (el('settings-fund-label')) el('settings-fund-label').value = specialFundLabel;
-            if (el('settings-fund-expiry-days')) el('settings-fund-expiry-days').value = specialFundExpiryDays;
-            if (el('settings-fund-suggested-amount')) el('settings-fund-suggested-amount').value = specialFundSuggestedAmount;
-
-            const suggestedText = specialFundSuggestedAmount > 0 ? `Suggested: ${formatCurrency(specialFundSuggestedAmount)}+` : '';
-            if (el('payment-homecoming-suggested')) el('payment-homecoming-suggested').innerText = suggestedText;
-            if (el('my-homecoming-suggested')) {
-                const showToMember = specialFundStartedAt && (!loggedInMember || !loggedInMember.homecoming);
-                el('my-homecoming-suggested').innerText = showToMember ? suggestedText : '';
-            }
-
-            const banner = getFundCampaignBannerHTML();
-            if (el('hero-fund-banner')) el('hero-fund-banner').innerHTML = banner;
-            if (el('ledger-fund-banner')) el('ledger-fund-banner').innerHTML = banner;
-            if (el('settings-fund-status')) {
-                el('settings-fund-status').innerHTML = getFundCampaignBadgeHTML() || '<span style="color: var(--text-muted); font-size: 0.8rem;">No round currently running.</span>';
-            }
-            if (loggedInMember && el('my-homecoming-countdown')) {
-                el('my-homecoming-countdown').innerHTML = getFundCampaignBadgeHTML();
-            }
-        }
-
-        // Campaign-wide countdown — the SAME for every member, whether they've
-        // contributed yet or not, so people who haven't paid in still see that
-        // a temporary fund is running and are prompted to join in.
-        function getFundCampaignMillisLeft() {
-            if (!specialFundStartedAt) return null;
-            const endTime = new Date(specialFundStartedAt).getTime() + (specialFundExpiryDays * 24 * 60 * 60 * 1000);
-            return endTime - Date.now();
-        }
-
-        function getFundCampaignDaysLeft() {
-            const ms = getFundCampaignMillisLeft();
-            if (ms === null) return null;
-            return Math.ceil(ms / (1000 * 60 * 60 * 24));
-        }
-
-        // Fixed, meaningful checkpoints rather than a smooth proportional
-        // gradient — calm green with plenty of time left, orange once inside
-        // a month, red once inside the final two weeks.
-        function getTimerColorForDaysLeft(daysLeft) {
-            if (daysLeft > 30) return [16, 185, 129];   // green
-            if (daysLeft > 15) return [249, 115, 22];   // orange
-            return [239, 68, 68];                        // red
-        }
-
-        function getFundThankYouHTML(member) {
-            if (!member || !member.homecoming || member.homecoming <= 0) return '';
-            return `<div style="margin-top: 8px; font-size: 0.8rem; color: var(--accent-purple); font-weight: 500;">🙏 Thank you for contributing to the ${escapeHtml(specialFundLabel)}!</div>`;
-        }
-
-        function getFundCampaignBadgeHTML() {
-            const ms = getFundCampaignMillisLeft();
-            if (ms === null) return '';
-
-            const totalMs = specialFundExpiryDays * 24 * 60 * 60 * 1000;
-            const percentRemaining = Math.min(100, Math.max(0, (ms / totalMs) * 100));
-
-            const clampedMs = Math.max(0, ms);
-            const days = Math.floor(clampedMs / (1000 * 60 * 60 * 24));
-            const hours = Math.floor((clampedMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-            const minutes = Math.floor((clampedMs % (1000 * 60 * 60)) / (1000 * 60));
-
-            const daysLeftForColor = Math.ceil(ms / (1000 * 60 * 60 * 24));
-            const text = ms <= 0 ? 'Closing soon' : `${days}d ${hours}h ${minutes}m left`;
-
-            const [r, g, b] = getTimerColorForDaysLeft(daysLeftForColor);
-            const solid = `rgb(${r}, ${g}, ${b})`;
-            const soft = `rgba(${r}, ${g}, ${b}, 0.15)`;
-            const border = `rgba(${r}, ${g}, ${b}, 0.5)`;
-
-            return `<div class="homecoming-timer-badge" style="background: ${soft}; border: 1px solid ${border}; color: ${solid};">
-                <span>⏳ ${text}</span>
-                <div class="timer-progress-track"><div class="timer-progress-fill" style="width: ${percentRemaining}%; background: ${solid};"></div></div>
-            </div>`;
-        }
-
-        function getFundCampaignBannerHTML() {
-            if (!specialFundStartedAt) return '';
-            return `<div class="fund-campaign-banner">
-                <div class="fund-campaign-name">${escapeHtml(specialFundLabel)}</div>
-                ${getFundCampaignBadgeHTML()}
-            </div>`;
-        }
-
-
-        function checkHomecomingExpirations() {
-            // Only the admin session has write access to the settings/members
-            // fields involved (see Firestore rules), so this only actually
-            // takes effect while someone is logged into the admin dashboard —
-            // it runs every time that happens, which is the closest a fully
-            // client-side app can get to an automatic background expiry
-            // without a paid server.
-            const daysLeft = getFundCampaignDaysLeft();
-            if (daysLeft === null || daysLeft > 0) return;
-
-            endFundRound(true);
-        }
-
-        function endFundRound(isAutoExpiry = false) {
-            if (!isAutoExpiry) {
-                const daysLeft = getFundCampaignDaysLeft();
-                if (daysLeft === null) {
-                    showToast('No fund round is currently running.', true);
-                    return;
-                }
-                if (!confirm(`End the "${specialFundLabel}" round now? This clears everyone's contributed amount immediately.`)) {
-                    return;
-                }
-            }
-
-            const contributors = membersData.filter(m => m.homecoming && m.homecoming > 0);
-            const batch = db.batch();
-            contributors.forEach(m => {
-                batch.update(membersCol.doc(m.id), { homecoming: 0 });
-            });
-            batch.set(settingsDoc, { specialFundStartedAt: null }, { merge: true });
-
-            batch.commit()
-                .then(() => {
-                    const reason = isAutoExpiry ? `expired after ${specialFundExpiryDays} days` : 'was ended early by admin';
-                    logAudit(`${specialFundLabel} round ${reason}. ${contributors.length} contribution(s) cleared.`);
-                    showToast(isAutoExpiry ? `${specialFundLabel} round expired and was cleared.` : `${specialFundLabel} round ended.`);
-                })
-                .catch(err => console.error('Ending fund round failed:', err));
-        }
 
         // Falls back to the current active year's real rate (not a stale
         // hardcoded number) if a specific year's rate is ever missing —
@@ -1583,7 +1380,7 @@
             return { percent, paidCount, expectedCount };
         }
 
-        // Same green/orange/red thresholds used for the homecoming countdown,
+        // Same green/orange/red thresholds used elsewhere in the app,
         // but inverted: here HIGHER is better, since this measures progress
         // rather than time running out.
         function progressColor(percent) {
@@ -1621,7 +1418,6 @@
         function getFinancialTotals() {
             let totalDuesPaid = 0;
             let totalArrears = 0;
-            let totalHomecoming = 0;
             let totalAdvanceAmount = 0;
             let totalExpectedSoFar = 0; // everything that should have been paid by now, across all members
 
@@ -1629,23 +1425,21 @@
                 const fin = getMemberFinancials(m);
                 totalDuesPaid += fin.duesPaid;
                 totalArrears += fin.duesOwed;
-                totalHomecoming += m.homecoming || 0;
                 totalAdvanceAmount += fin.advanceAmount;
                 totalExpectedSoFar += (fin.duesPaid - fin.advanceAmount) + fin.duesOwed;
             });
 
-            return { totalDuesPaid, totalArrears, totalHomecoming, totalAdvanceAmount, totalExpectedSoFar };
+            return { totalDuesPaid, totalArrears, totalAdvanceAmount, totalExpectedSoFar };
         }
 
         function renderStats() {
-            const { totalDuesPaid, totalArrears, totalHomecoming, totalAdvanceAmount, totalExpectedSoFar } = getFinancialTotals();
+            const { totalDuesPaid, totalArrears, totalAdvanceAmount, totalExpectedSoFar } = getFinancialTotals();
 
             document.getElementById('stat-members').innerText = membersData.length;
             document.getElementById('stat-rate-active').innerText = `${formatCurrency(getRateForYear(activeYear))} (${activeYear})`;
             document.getElementById('stat-dues').innerText = formatCurrency(totalDuesPaid);
             document.getElementById('stat-arrears').innerText = formatCurrency(totalArrears);
             document.getElementById('stat-advance').innerText = formatCurrency(totalAdvanceAmount);
-            document.getElementById('stat-homecoming').innerText = formatCurrency(totalHomecoming);
 
             const collectedSoFar = totalDuesPaid - totalAdvanceAmount;
             const collectionRate = totalExpectedSoFar > 0 ? Math.round((collectedSoFar / totalExpectedSoFar) * 100) : 100;
@@ -1802,15 +1596,11 @@
                 renderActiveYearOptions();
                 renderRateInputs();
                 document.getElementById('logo-preview').innerHTML = logoData ? `<img src="${logoData}" alt="Logo">` : 'AN';
-                renderSpecialFundLabels();
                 renderAdminAccessList();
                 const modeInput = document.querySelector(`input[name="homepage-visual-mode"][value="${homepageVisualMode}"]`);
                 if (modeInput) modeInput.checked = true;
                 applyAdminRoleRestrictions();
                 showToast(currentAdminRole === 'main' ? 'Admin Portal Active' : 'Admin Portal Active — view only');
-                if (currentAdminRole === 'main') {
-                    checkHomecomingExpirations();
-                }
             } else {
                 subtitle.innerText = "Member Portal — Monthly Contributions Schedule";
                 toggleBtn.innerText = "Admin Login";
@@ -2101,10 +1891,6 @@
             document.getElementById('my-dues').innerText = formatCurrency(fin.duesPaid);
             document.getElementById('my-owed').innerText = formatCurrency(fin.duesOwed);
             document.getElementById('my-advance-amount').innerText = formatCurrency(fin.advanceAmount);
-            document.getElementById('my-homecoming').innerText = formatCurrency(member.homecoming);
-            document.getElementById('my-homecoming-countdown').innerHTML = getFundCampaignBadgeHTML();
-            document.getElementById('my-homecoming-thanks').innerHTML = getFundThankYouHTML(member);
-            renderSpecialFundLabels();
             renderMyProgress(member);
 
             const dueBanner = document.getElementById('my-amount-due-banner');
@@ -2272,7 +2058,6 @@
                 phone: phone || '0240000000',
                 phone2: phone2 || null,
                 paidMonths: [],
-                homecoming: 0.00,
                 lastLogin: null,
                 joinMonth: joinMonth
             };
@@ -2420,8 +2205,6 @@
                 `;
             }).join('');
 
-            const prefillSuggested = specialFundStartedAt && specialFundSuggestedAmount > 0;
-            document.getElementById('payment-homecoming-amount').value = member.homecoming > 0 ? member.homecoming : (prefillSuggested ? specialFundSuggestedAmount : '');
             document.getElementById('payment-modal').classList.add('active');
         }
 
@@ -2456,16 +2239,15 @@
                 }
             }
 
-            const homecomingInput = parseFloat(document.getElementById('payment-homecoming-amount').value) || 0;
             const saveBtn = document.querySelector('#payment-modal .btn-green');
             saveBtn.innerText = 'Saving...';
             saveBtn.disabled = true;
 
-            const updateData = { paidMonths: newPaidMonths, homecoming: homecomingInput };
+            const updateData = { paidMonths: newPaidMonths };
 
             membersCol.doc(member.id).update(updateData)
                 .then(() => {
-                    logAudit(`Payment & advanced months updated for ${member.name}. Paid/Advance Months: [${newPaidMonths.join(', ')}] | ${specialFundLabel}: GH¢ ${homecomingInput}.`);
+                    logAudit(`Payment & advanced months updated for ${member.name}. Paid/Advance Months: [${newPaidMonths.join(', ')}].`);
                     closePaymentModal();
                     // The live members listener refreshes stats/table/cards and the
                     // logged-in member's own dashboard automatically — no manual re-render needed.
@@ -2532,7 +2314,6 @@
                     <td>${paidMonthsStr}</td>
                     <td>${owedMonthsStr}</td>
                     <td>${lastLoginStr}</td>
-                    <td class="val-purple">${formatCurrency(member.homecoming)}</td>
                     <td>
                         <div class="action-btns">
                             <button class="action-link main-admin-only" onclick="openEditMemberDetailsModal('${member.id}')">Edit Details</button>
@@ -2663,11 +2444,9 @@
         // MONTHLY COLLECTIONS REPORT (chart)
         // ------------------------------------------------------------
         function renderFinancialBreakdown() {
-            const { totalDuesPaid, totalArrears, totalHomecoming } = getFinancialTotals();
+            const { totalDuesPaid, totalArrears } = getFinancialTotals();
             document.getElementById('breakdown-dues-collected').innerText = formatCurrency(totalDuesPaid);
             document.getElementById('breakdown-dues-owed').innerText = formatCurrency(totalArrears);
-            document.getElementById('breakdown-homecoming-collected').innerText = formatCurrency(totalHomecoming);
-            document.getElementById('breakdown-homecoming-label').innerText = `${specialFundLabel} Collected`;
             document.getElementById('breakdown-as-of-date').innerText = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
         }
 
@@ -3090,7 +2869,6 @@
                     phone2: row.phone2 || null,
                     pin: row.pin,
                     paidMonths: [],
-                    homecoming: 0.00,
                     lastLogin: null,
                     joinMonth: row.joinMonth
                 });
@@ -3259,9 +3037,6 @@
                     activeYear,
                     calendarStartYear: CALENDAR_START_YEAR,
                     calendarEndYear,
-                    specialFundLabel,
-                    specialFundExpiryDays,
-                    specialFundStartedAt,
                     logoData
                 }
             };
@@ -3444,81 +3219,6 @@
                 });
         }
 
-        function saveSpecialFundSettings() {
-            const newLabel = document.getElementById('settings-fund-label').value.trim();
-            const newExpiryDays = parseInt(document.getElementById('settings-fund-expiry-days').value, 10);
-            const newSuggestedAmount = parseFloat(document.getElementById('settings-fund-suggested-amount').value) || 0;
-
-            if (!newLabel) {
-                showToast('Please enter a fund name.', true);
-                return;
-            }
-            if (isNaN(newExpiryDays) || newExpiryDays < 1) {
-                showToast('Please enter a valid number of days (1 or more).', true);
-                return;
-            }
-            if (newExpiryDays > 365) {
-                showToast('That\'s over a year — double check for a typo. (Max allowed: 365 days.)', true);
-                return;
-            }
-            if (!confirm(`Start a new "${newLabel}" round now, running for ${newExpiryDays} days? This restarts the countdown for everyone.`)) {
-                return;
-            }
-
-            const saveBtn = document.getElementById('save-fund-settings-btn');
-            saveBtn.innerText = 'Starting...';
-            saveBtn.disabled = true;
-
-            settingsDoc.set({
-                specialFundLabel: newLabel,
-                specialFundExpiryDays: newExpiryDays,
-                specialFundSuggestedAmount: newSuggestedAmount,
-                specialFundStartedAt: new Date().toISOString()
-            }, { merge: true })
-                .then(() => {
-                    logAudit(`Started a new "${newLabel}" round, running for ${newExpiryDays} days.`);
-                    showToast(`${newLabel} round started!`);
-                })
-                .catch(err => {
-                    console.error('Fund settings save failed:', err);
-                    showToast(getSaveErrorMessage(err), true);
-                })
-                .finally(() => {
-                    saveBtn.innerText = 'Start / Restart Fund Round';
-                    saveBtn.disabled = false;
-                });
-        }
-
-        function saveSuggestedAmount() {
-            const input = document.getElementById('settings-fund-suggested-amount');
-            const newAmount = parseFloat(input.value);
-
-            if (isNaN(newAmount) || newAmount < 0) {
-                showToast('Please enter a valid amount (0 or more).', true);
-                return;
-            }
-
-            const btn = document.getElementById('save-suggested-amount-btn');
-            const originalText = btn.innerText;
-            btn.innerText = 'Saving...';
-            btn.disabled = true;
-
-            settingsDoc.set({ specialFundSuggestedAmount: newAmount }, { merge: true })
-                .then(() => {
-                    specialFundSuggestedAmount = newAmount;
-                    renderSpecialFundLabels();
-                    logAudit(`${specialFundLabel} suggested amount set to GH¢ ${newAmount}.`);
-                    showToast('Suggested amount saved!');
-                })
-                .catch(err => {
-                    console.error('Suggested amount save failed:', err);
-                    showToast(getSaveErrorMessage(err), true);
-                })
-                .finally(() => {
-                    btn.innerText = originalText;
-                    btn.disabled = false;
-                });
-        }
 
         function handleLogoFileSelect(input) {
             const file = input.files && input.files[0];
@@ -3593,7 +3293,7 @@
         }
 
         function exportToCSV() {
-            let csv = [csvEscape('Name'), csvEscape('Phone'), csvEscape('Alternate Phone'), csvEscape('Paid & Advanced Months'), csvEscape('Owed Months'), csvEscape('Last Login'), csvEscape(specialFundLabel)].join(',') + '\n';
+            let csv = [csvEscape('Name'), csvEscape('Phone'), csvEscape('Alternate Phone'), csvEscape('Paid & Advanced Months'), csvEscape('Owed Months'), csvEscape('Last Login')].join(',') + '\n';
             membersData.forEach(m => {
                 const fin = getMemberFinancials(m);
                 csv += [
@@ -3602,8 +3302,7 @@
                     csvEscape(m.phone2 || ''),
                     csvEscape((m.paidMonths || []).join('; ')),
                     csvEscape(fin.owedMonths.join('; ')),
-                    csvEscape(m.lastLogin || 'Never'),
-                    csvEscape(m.homecoming || 0)
+                    csvEscape(m.lastLogin || 'Never')
                 ].join(',') + '\n';
             });
             const link = document.createElement("a");
@@ -3618,16 +3317,6 @@
         // No window.onload render calls needed — the membersCol/settingsDoc/auditCol
         // onSnapshot listeners above fire immediately on page load with the current
         // data and handle the first render themselves (see markReady()).
-
-        // Keeps the fund countdown genuinely live — updates the day/hour/minute
-        // display and its color everywhere it's shown, once a minute, without
-        // needing a page reload. Cheap: it only touches the DOM if a fund
-        // round is actually running.
-        setInterval(() => {
-            if (specialFundStartedAt) {
-                renderSpecialFundLabels();
-            }
-        }, 60 * 1000);
 
         // Register the service worker so browsers offer "Add to Home Screen".
         // Only works when hosted over HTTPS (or localhost) — browsers block
