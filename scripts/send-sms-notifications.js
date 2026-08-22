@@ -94,7 +94,6 @@ async function main() {
   const calendarEndYear = settings.calendarEndYear || 2028;
   const ratesByYear = settings.ratesByYear || { '2026': 20.00 };
   const activeYear = settings.activeYear || '2026';
-  const specialFundLabel = settings.specialFundLabel || 'Homecoming Fund';
 
   const welfareMonths = generateWelfareMonths(CALENDAR_START_YEAR, calendarEndYear);
   const currIdx = getCurrentMonthIndex(welfareMonths, calendarEndYear);
@@ -126,7 +125,7 @@ async function main() {
 
     // This member's own standing — not the association-wide totals.
     const fin = getMemberFinancials(member, welfareMonths, currIdx, ratesByYear, activeYear);
-    const breakdownText = `\n\nHere's a breakdown:\nTotal dues paid: ${formatCurrency(fin.duesPaid)}\nTotal arrears: ${formatCurrency(fin.duesOwed)}\n${specialFundLabel}: ${formatCurrency(member.homecoming || 0)}`;
+    const breakdownText = `\n\nHere's a breakdown:\nTotal dues paid: ${formatCurrency(fin.duesPaid)}\nTotal arrears: ${formatCurrency(fin.duesOwed)}`;
 
     const message = `Hi ${member.name}, your Anuanom 2016 Welfare payment for ${monthsText} has been recorded. Thank you!${breakdownText}`;
 
